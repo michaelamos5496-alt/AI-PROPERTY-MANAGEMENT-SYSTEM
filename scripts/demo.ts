@@ -4,6 +4,7 @@
  * Listens on 127.0.0.1 only. Everything disappears when you stop it. The login below exists ONLY inside this demo process;
  * it is not a default password of the real application (which has none).
  */
+import express from 'express';
 import { createDevServer } from '../src/dev.js';
 import { loadEnv } from '../src/lib/env.js';
 import { startMockSupabase } from '../tests/support/mock-supabase.js';
@@ -13,7 +14,21 @@ const EMAIL = 'owner@demo.test'; const PASSWORD = 'Demo-Passw0rd-2026';
 const mock = await startMockSupabase();
 const env = loadEnv({ NODE_ENV: 'test', PORT: String(PORT), APP_URL: `http://localhost:${PORT}`, SUPABASE_URL: mock.url, SUPABASE_ANON_KEY: mock.anonKey, SUPABASE_SERVICE_ROLE_KEY: mock.serviceKey,
   CRON_SECRET: 'demo-cron-secret-0123456789-0123456789', LOG_LEVEL: 'silent', RATE_LIMIT_MAX: '100000', RATE_LIMIT_AUTH_MAX: '1000', EMAIL_INLINE_DELIVERY: 'false' });
-const server = createDevServer(env).listen(PORT, '127.0.0.1');
+const inner = createDevServer(env);
+// DEMO ONLY (this file is never part of the deployed app): opening / or /login signs you in as the demo owner, so you can look around without typing anything.
+// It works by performing the normal login for the demo user and handing you the normal session cookies; the app's own authentication is untouched.
+const outer = express();
+outer.get(['/', '/login'], async (req, res, next) => {
+  if (/\bpai_at=/.test(req.headers.cookie ?? '') && req.path === '/') return next();
+  try {
+    const r = await fetch(`http://127.0.0.1:${PORT}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: EMAIL, password: PASSWORD }) });
+    if (!r.ok) return next();
+    for (const c of r.headers.getSetCookie()) res.append('set-cookie', c);
+    res.redirect(303, '/app');
+  } catch { next(); }
+});
+outer.use(inner);
+const server = outer.listen(PORT, '127.0.0.1');
 const base = `http://127.0.0.1:${PORT}`;
 
 let cookie = '';
@@ -42,5 +57,5 @@ for (const [name, unitRef, rent, email] of people) {
 await call('POST', `${b}/maintenance`, { property: prop.id, unit: first, title: 'Kitchen tap dripping', description: 'The cold tap drips all day.', category: 'plumbing' });
 await call('POST', '/auth/logout', {});
 
-console.log(`\nProperty AI demo is running (fake data, in memory, this computer only)\n\n  Open:      ${base}\n  Email:     ${EMAIL}\n  Password:  ${PASSWORD}\n  Role:      owner (the highest role: sees everything, can invite and manage others)\n\nTry: Copilot → "Who is overdue on rent?", Maintenance, Finance, Plan.\nPress Ctrl+C to stop.\n`);
+console.log(`\nProperty AI demo is running (fake data, in memory, this computer only)\n\n  Open:      ${base}   (signs you in automatically; no password needed)\n  Email:     ${EMAIL}\n  Password:  ${PASSWORD}\n  Role:      owner (the highest role: sees everything, can invite and manage others)\n\nTry: Copilot → "Who is overdue on rent?", Maintenance, Finance, Plan.\nPress Ctrl+C to stop.\n`);
 process.on('SIGINT', async () => { server.close(); await mock.close(); process.exit(0); });

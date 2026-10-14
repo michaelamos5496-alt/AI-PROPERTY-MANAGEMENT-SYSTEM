@@ -1,4 +1,4 @@
-# Property AI — Phases 1–5: foundation, properties and tenancies, rent ledger, operations, AI copilot
+# Property AI — Phases 1–6: foundation, properties and tenancies, rent ledger, operations, AI copilot, WhatsApp assistant
 
 Multi-tenant workspace: auth, organizations, roles, invitations. Node 20+/TypeScript API (Express 5) on Vercel,
 static HTML/CSS/vanilla-JS frontend, Supabase (Auth + Postgres with RLS).
@@ -87,6 +87,12 @@ Scheduled jobs need `SUPABASE_SERVICE_ROLE_KEY` + `CRON_SECRET` (server-side onl
 A dashboard copilot that answers from live records and prepares work for people to confirm or managers to approve. Works with no key
 (rules mode) or with Claude via `LLM_PROVIDER=anthropic`. The model can only call a fixed set of validated tools; the application and the
 database decide what is allowed. Design, security model, limits and configuration: **docs/COPILOT.md**.
+
+## Phase 6: WhatsApp tenant assistant
+
+Official Meta WhatsApp Cloud API: signed webhook → durable inbox → conversation engine (FAQs, maintenance intake, status, handoffs) with
+verified identity linking, consent/opt-out, template and 24-hour-window rules, delivery tracking, and approval-gated reminders.
+**Not yet verified against Meta**; see **docs/WHATSAPP.md** (design, security model, prerequisites, sandbox test workflow, verification log).
 
 ## Known limitations (Phases 1–4)
 

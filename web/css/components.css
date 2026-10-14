@@ -152,3 +152,13 @@
 @keyframes copilot-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
 @media (max-width: 52rem) { .copilot__layout { grid-template-columns: 1fr; } }
+
+/* ----------------------------------------------------------------- whatsapp */
+.wa-thread { display: flex; flex-direction: column; gap: 0.5rem; max-height: 40vh; overflow-y: auto; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: 0.5rem; margin: 0.75rem 0; }
+.wa-msg { max-width: 85%; padding: 0.4rem 0.6rem; border-radius: 0.5rem; background: var(--color-surface-2); }
+.wa-msg--in { align-self: flex-start; }
+.wa-msg--out { align-self: flex-end; border: 1px solid var(--color-border); background: var(--color-surface); }
+.wa-reply { display: flex; gap: 0.5rem; align-items: flex-end; margin-bottom: 0.75rem; }
+.wa-reply .textarea { flex: 1; }
+.code-big { font-size: 1.8rem; letter-spacing: 0.25em; font-family: ui-monospace, monospace; }
+.checklist { list-style: none; padding: 0; margin: 0 0 1rem; display: flex; flex-direction: column; gap: 0.3rem; }

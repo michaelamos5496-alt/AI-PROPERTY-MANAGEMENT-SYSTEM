@@ -93,7 +93,7 @@ export async function maintenanceListView(ctx) {
         { key: 'property', label: 'Property', options: props.options }, { key: 'category', label: 'Category', options: options(MAINT_CATEGORY) },
         { key: 'attention', label: 'Needs acknowledgement', type: 'checkbox' }],
       columns: [
-        { label: 'Request', sort: 'created', render: (r) => [h('a', { href: `#/maintenance/${r.id}` }, r.title), r.escalation_required && !r.escalation_ack_at && !['resolved', 'cancelled'].includes(r.status) ? [' ', h('span', { class: 'badge badge--critical' }, 'Unacknowledged')] : '', r.reported_via === 'tenant' ? [' ', h('span', { class: 'badge' }, 'Tenant')] : ''] },
+        { label: 'Request', sort: 'created', render: (r) => [h('a', { href: `#/maintenance/${r.id}` }, r.title), r.escalation_required && !r.escalation_ack_at && !['resolved', 'cancelled'].includes(r.status) ? [' ', h('span', { class: 'badge badge--critical' }, 'Unacknowledged')] : '', r.reported_via === 'tenant' ? [' ', h('span', { class: 'badge' }, 'Tenant')] : r.reported_via === 'whatsapp' ? [' ', h('span', { class: 'badge' }, 'WhatsApp')] : ''] },
         { label: 'Property', sort: 'property', render: (r) => `${r.property_name}${r.unit_reference ? ` · ${r.unit_reference}` : ''}` },
         { label: 'Urgency', sort: 'urgency', render: (r) => urgencyPill(r.urgency_label, r.urgency_critical) },
         { label: 'Status', sort: 'status', render: (r) => [statusPill(r.status), r.pending_approvals > 0 ? [' ', h('span', { class: 'badge badge--m-awaiting_approval' }, 'Approval pending')] : ''] },
@@ -183,7 +183,7 @@ export function maintenanceDetailView(ctx, id) {
       pageHeader(r.title, { subtitle: `${r.property.name}${r.unit ? ` · unit ${r.unit.reference}` : ''}`, badges: [statusPill(r.status), urgencyPill(u.label, u.is_critical)], actions }),
       escalation,
       h('div', { class: 'cols-2' },
-        section('Details', dl([['Description', h('span', { class: 'prewrap' }, r.description)], ['Category', MAINT_CATEGORY[r.category]], ['Reported by', `${r.reporter}${r.reported_via === 'tenant' ? ' (tenant)' : ''}`],
+        section('Details', dl([['Description', h('span', { class: 'prewrap' }, r.description)], ['Category', MAINT_CATEGORY[r.category]], ['Reported by', (r.reported_via === 'whatsapp' ? `WhatsApp (logged by ${r.reporter})` : `${r.reporter}${r.reported_via === 'tenant' ? ' (tenant)' : ''}`)],
           ['Tenant', r.tenant && h('a', { href: `#/tenants/${r.tenant.id}` }, r.tenant.full_name)], ['Reported', fmtTimestamp(r.created_at)], r.suggested_urgency ? ['Suggested urgency', `${r.suggested_urgency.label} (${r.suggestion_source}) — advisory only`] : null,
           r.resolution_notes ? ['Resolution', h('span', { class: 'prewrap' }, r.resolution_notes)] : null, r.cancel_reason ? ['Cancelled because', r.cancel_reason] : null])),
         section('History', h('ol', { class: 'timeline' }, r.history.map((x) => h('li', {}, h('strong', {}, MAINT_STATUS[x.to_status]), h('div', { class: 'small muted' }, `${x.actor ?? 'System'} · ${fmtTimestamp(x.created_at)}`), x.note ? h('div', {}, x.note) : ''))))),

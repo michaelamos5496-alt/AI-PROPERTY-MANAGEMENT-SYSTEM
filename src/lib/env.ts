@@ -44,6 +44,20 @@ const schema = z.object({
   COPILOT_MAX_CONCURRENT: z.coerce.number().int().min(1).max(100).default(8),
   /** First of two switches for AI-prepared external messages; the organization's own setting is the second. */
   COPILOT_EXTERNAL_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  /** 'log' records outbound WhatsApp messages without sending them (development/tests); 'cloud' calls the Meta WhatsApp Cloud API. */
+  WHATSAPP_PROVIDER: z.enum(['log', 'cloud']).default('log'),
+  /** Meta app secret: used ONLY to verify the X-Hub-Signature-256 of webhook deliveries. Without it the webhook refuses everything. */
+  WHATSAPP_APP_SECRET: z.string().min(16).optional(),
+  /** The string you type into the webhook "Verify token" field in the Meta dashboard. */
+  WHATSAPP_VERIFY_TOKEN: z.string().min(16).optional(),
+  /** System-user access token with whatsapp_business_messaging. Server only. */
+  WHATSAPP_ACCESS_TOKEN: z.string().min(20).optional(),
+  /** Check Meta's current Graph API version; this is configuration, not a pin. */
+  WHATSAPP_GRAPH_VERSION: z.string().regex(/^v\d{1,2}\.\d$/).default('v25.0'),
+  WHATSAPP_API_BASE: url.default('https://graph.facebook.com'),
+  WHATSAPP_INBOUND_MAX_PER_10MIN: z.coerce.number().int().min(3).max(200).default(20),
+  /** How long the webhook may spend processing before it answers Meta (events are already saved; workers finish the rest). */
+  WHATSAPP_INLINE_BUDGET_MS: z.coerce.number().int().min(0).max(8000).default(3000),
   /** Refresh-cookie lifetime in days. */
   SESSION_DAYS: z.coerce.number().int().min(1).max(90).default(14),
 });
@@ -63,6 +77,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   }
   if (env.LLM_PROVIDER === 'anthropic' && !env.ANTHROPIC_API_KEY) {
     throw new Error('Invalid environment configuration:\n  - LLM_PROVIDER=anthropic requires ANTHROPIC_API_KEY');
+  }
+  if (env.WHATSAPP_PROVIDER === 'cloud' && (!env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_APP_SECRET || !env.WHATSAPP_VERIFY_TOKEN)) {
+    throw new Error('Invalid environment configuration:\n  - WHATSAPP_PROVIDER=cloud requires WHATSAPP_ACCESS_TOKEN, WHATSAPP_APP_SECRET and WHATSAPP_VERIFY_TOKEN');
   }
   if (env.NODE_ENV === 'production' && !env.APP_URL.startsWith('https://')) {
     throw new Error('Invalid environment configuration:\n  - APP_URL: must be https in production');

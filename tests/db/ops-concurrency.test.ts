@@ -197,3 +197,50 @@ describe('copilot under parallel load', () => {
     expect(await num(`select count(*) n from public.approvals where id = $1 and status = 'executed'`, [s.approval_id])).toBe(1);
   });
 });
+
+describe('whatsapp under parallel load', () => {
+  const PN = '720000000000001';
+  async function channel() {
+    if (!(await num(`select count(*) n from public.whatsapp_channels where org_id = $1`, [w.org]))) {
+      await pg.call(w.admin, 'save_wa_channel', { p_org: w.org, p_phone_number_id: PN, p_display_number: null, p_waba_id: null, p_enabled: true, p_intake_user: w.manager.sub, p_urgent_user: null, p_welcome_text: null,
+        p_rent_template_name: null, p_rent_template_lang: 'en', p_rent_template_body: null, p_update_template_name: null, p_update_template_lang: 'en' });
+    }
+  }
+  it('twelve workers draining one inbox handle every event once, and a contact\'s events in order', async () => {
+    await channel();
+    const events = Array.from({ length: 60 }, (_, i) => ({ kind: 'message', provider_id: `p-${i}`, contact_key: `9100000${i % 6}`, payload: { i } }));
+    await pg.svcCall('wa_svc_ingest', { p_phone_number_id: PN, p_events: JSON.stringify(events) });
+    const seen: { id: number; contact: string; i: number }[] = [];
+    await Promise.all(Array.from({ length: 12 }, async (_, w_) => {
+      for (let idle = 0; idle < 40;) {
+        const batch = await pg.svcCall('wa_svc_claim_events', { p_worker: `w${w_}`, p_limit: 5, p_lease_seconds: 60 });
+        if (!batch.length) { if (await num(`select count(*) n from public.whatsapp_events where status in ('pending','processing') and provider_id like 'p-%'`) === 0) return; idle++; await new Promise((r) => setTimeout(r, 15)); continue; }
+        for (const e of batch) { seen.push({ id: e.id, contact: e.payload.i % 6 + '', i: e.payload.i }); await pg.svcCall('wa_svc_finish_event', { p_id: e.id, p_worker: `w${w_}`, p_outcome: 'done', p_error: null, p_delay_seconds: 0 }); }
+      }
+    }));
+    expect(seen).toHaveLength(60);
+    expect(new Set(seen.map((s) => s.i)).size).toBe(60);
+    for (const c of ['0', '1', '2', '3', '4', '5']) { const order = seen.filter((s) => s.contact === c).map((s) => s.i); expect(order).toEqual([...order].sort((a, b) => a - b)); }
+  });
+  it('the same inbound message delivered by many connections at once is recorded once', async () => {
+    await channel();
+    const args = { p_org: w.org, p_wa_id: '91000099', p_name: 'Race', p_provider_id: `wamid.race.${key()}`, p_kind: 'text', p_body: 'hi', p_ts: new Date().toISOString(), p_max_per_10min: 50 };
+    const rs = await Promise.all(Array.from({ length: 10 }, () => pg.svcCall('wa_svc_begin_inbound', args)));
+    expect(rs.filter((r: any) => !r.duplicate)).toHaveLength(1);
+    expect(await num(`select count(*) n from public.whatsapp_contacts where wa_id = '91000099'`)).toBe(1);
+  });
+  it('one link code can verify only one number, however many try at once', async () => {
+    await channel();
+    const tenantId = (await pg.call(w.staff, 'create_tenant', tenantArgs(w.org, 'Link Race', { p_email: null }))).id;
+    const unit = (await pg.call(w.manager, 'create_unit', unitArgs(w.org, w.prop, `L${++n}`))).id;
+    const t = await pg.call(w.staff, 'create_tenancy', tenancyArgs(w.org, unit, [tenantId], { p_end_date: null }));
+    await pg.call(w.manager, 'activate_tenancy', { p_org: w.org, p_tenancy: t.id, p_expected_version: t.version });
+    const { createHash } = await import('node:crypto');
+    const hash = createHash('sha256').update('RACECODE').digest('hex');
+    await pg.call(w.manager, 'create_wa_link_code', { p_org: w.org, p_tenant: tenantId, p_code_hash: hash });
+    const contacts = await Promise.all(Array.from({ length: 8 }, (_, i) => pg.svcCall('wa_svc_begin_inbound', { p_org: w.org, p_wa_id: `9200000${i}`, p_name: null, p_provider_id: `wamid.lr.${i}.${key()}`, p_kind: 'text', p_body: 'x', p_ts: new Date().toISOString(), p_max_per_10min: 50 })));
+    const rs = await Promise.all(contacts.map((c: any) => pg.svcCall('wa_svc_try_link', { p_org: w.org, p_contact: c.contact.id, p_code_hash: hash })));
+    expect(rs.filter((r: any) => r.result === 'linked')).toHaveLength(1);
+    expect(await num(`select count(*) n from public.whatsapp_contacts where tenant_id = $1`, [tenantId])).toBe(1);
+  });
+});

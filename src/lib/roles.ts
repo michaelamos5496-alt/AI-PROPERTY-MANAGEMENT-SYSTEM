@@ -32,6 +32,8 @@ export const PERMISSIONS = {
   'maintenance:settings': 'admin', // escalation contact, keywords, approval thresholds
   'copilot:use': 'staff',          // ask the AI copilot; it can only prepare work for a person to confirm or a manager to approve
   'copilot:manage': 'admin',       // turn the copilot and external messaging on or off, set the daily AI budget
+  'whatsapp:use': 'manager',       // WhatsApp conversations, link codes, handoffs, replies, reminder drafts
+  'whatsapp:manage': 'admin',      // connect the number, FAQs, templates
   'approvals:request': 'staff',
   'approvals:decide': 'manager',
   'delivery:manage': 'manager',    // email queue visibility, retries, run scheduled jobs

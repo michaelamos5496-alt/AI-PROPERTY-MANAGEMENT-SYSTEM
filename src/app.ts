@@ -12,14 +12,17 @@ import { orgRoutes } from './routes/orgs.js';
 import { deliverEmails } from './jobs/runner.js';
 import { financeRoutes } from './routes/finance.js';
 import { internalRoutes } from './routes/internal.js';
+import { copilotRoutes } from './routes/copilot.js';
+import { createProvider } from './ai/providers.js';
+import type { LlmProvider } from './ai/types.js';
 import { opsRoutes, portalRoutes, userRoutes } from './routes/ops.js';
 import { createEmailProvider, type EmailProvider } from './services/email.js';
 import { recordRoutes } from './routes/records.js';
 import { AuthApi, DataApi, ServiceApi, StorageApi } from './services/supabase.js';
 
-export interface AppDeps { env: Env; fetch?: typeof fetch; logger?: Logger; emailProvider?: EmailProvider }
+export interface AppDeps { env: Env; fetch?: typeof fetch; logger?: Logger; emailProvider?: EmailProvider; llm?: LlmProvider }
 
-export function createApp({ env, fetch: f = fetch, logger, emailProvider }: AppDeps): Express {
+export function createApp({ env, fetch: f = fetch, logger, emailProvider, llm }: AppDeps): Express {
   const log = logger ?? createLogger(env.LOG_LEVEL);
   const auth = new AuthApi(env, f);
   const data = new DataApi(env, f);
@@ -56,6 +59,7 @@ export function createApp({ env, fetch: f = fetch, logger, emailProvider }: AppD
   api.use('/organizations/:orgId', recordRoutes(env, data, storage));
   api.use('/organizations/:orgId', financeRoutes(env, data));
   api.use('/organizations/:orgId', opsRoutes(env, data, storage, { afterWrite }));
+  api.use('/organizations/:orgId', copilotRoutes(env, data, service, llm ?? createProvider(env), { afterWrite, log }));
   app.use('/api', api);
 
   app.use(notFoundHandler);

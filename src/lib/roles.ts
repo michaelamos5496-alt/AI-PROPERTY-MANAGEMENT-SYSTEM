@@ -30,6 +30,8 @@ export const PERMISSIONS = {
   'maintenance:write': 'staff',    // submit, triage, note, assign (staff: to themselves), estimate, progress
   'maintenance:manage': 'manager', // assign to anyone, cancel arranged work, reopen, acknowledge escalations, vendors, urgency levels
   'maintenance:settings': 'admin', // escalation contact, keywords, approval thresholds
+  'copilot:use': 'staff',          // ask the AI copilot; it can only prepare work for a person to confirm or a manager to approve
+  'copilot:manage': 'admin',       // turn the copilot and external messaging on or off, set the daily AI budget
   'approvals:request': 'staff',
   'approvals:decide': 'manager',
   'delivery:manage': 'manager',    // email queue visibility, retries, run scheduled jobs

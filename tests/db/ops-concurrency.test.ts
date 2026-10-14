@@ -170,3 +170,30 @@ describe('escalation under contention', () => {
     expect(await num(`select count(*) n from public.notifications where event_type = 'maintenance.escalated' and dedupe_key = $1`, ['mr:' + r.id + ':esc:0'])).toBe(2);   // owner + admin (no designated contact)
   });
 });
+
+describe('copilot under parallel load', () => {
+  it('only one model turn can hold a conversation; the rest are refused', async () => {
+    const c = await pg.call(w.staff, 'create_copilot_conversation', { p_org: w.org });
+    const rs = await Promise.allSettled(Array.from({ length: 8 }, (_, i) => pg.svcCall('copilot_svc_begin_turn', { p_org: w.org, p_user: w.staff.sub, p_conversation: c.id, p_request_id: `r${i}` })));
+    expect(tally(codes(rs))).toEqual({ ok: 1, PT409: 7 });
+    await pg.svcCall('copilot_svc_end_turn', { p_org: w.org, p_conversation: c.id });
+  });
+  it('identical proposals made at once collapse into one, and submitting twice creates one approval', async () => {
+    const note = `parallel ${key().slice(0, 6)}`;
+    const ps = await Promise.all(Array.from({ length: 8 }, () => pg.svcCall('copilot_svc_propose_action', { p_org: w.org, p_user: w.staff.sub, p_conversation: null, p_kind: 'test_action', p_payload: { note } })));
+    expect(new Set(ps.map((p: any) => p.id)).size).toBe(1);
+    expect(await num(`select count(*) n from public.copilot_actions where payload ->> 'note' = $1`, [note])).toBe(1);
+    const id = ps[0].id as string;
+    const subs = await Promise.allSettled(Array.from({ length: 6 }, () => pg.call(w.staff, 'copilot_submit_action', { p_org: w.org, p_action: id })));
+    expect(codes(subs).every((c) => c === 'ok')).toBe(true);
+    expect(await num(`select count(*) n from public.approvals where target_id = $1`, [id])).toBe(1);
+  });
+  it('two managers approving the same AI action at once execute it exactly once', async () => {
+    const note = `race ${key().slice(0, 6)}`;
+    const p = await pg.svcCall('copilot_svc_propose_action', { p_org: w.org, p_user: w.staff.sub, p_conversation: null, p_kind: 'test_action', p_payload: { note } });
+    const s = await pg.call(w.staff, 'copilot_submit_action', { p_org: w.org, p_action: p.id });
+    await Promise.allSettled([w.manager, w.manager2, w.manager, w.manager2].map((m) => pg.call(m, 'decide_approval', { p_org: w.org, p_approval: s.approval_id, p_decision: 'approve', p_note: null })));
+    expect(await num(`select count(*) n from public.copilot_test_log where note = $1`, [note])).toBe(1);
+    expect(await num(`select count(*) n from public.approvals where id = $1 and status = 'executed'`, [s.approval_id])).toBe(1);
+  });
+});

@@ -1,6 +1,6 @@
 export type ErrorCode =
   | 'bad_request' | 'validation_failed' | 'unauthenticated' | 'forbidden' | 'not_found'
-  | 'conflict' | 'rate_limited' | 'upstream_error' | 'internal_error';
+  | 'conflict' | 'limit_reached' | 'rate_limited' | 'upstream_error' | 'internal_error';
 
 /** An error whose message is safe to show to API clients. */
 export class AppError extends Error {
@@ -24,7 +24,7 @@ export class AppError extends Error {
 }
 
 const byStatus: Record<number, ErrorCode> = {
-  400: 'bad_request', 401: 'unauthenticated', 403: 'forbidden', 404: 'not_found',
+  400: 'bad_request', 401: 'unauthenticated', 402: 'limit_reached', 403: 'forbidden', 404: 'not_found',
   409: 'conflict', 422: 'validation_failed',
 };
 

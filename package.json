@@ -20,6 +20,7 @@
     "check": "npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "zod": "^3.25.0"

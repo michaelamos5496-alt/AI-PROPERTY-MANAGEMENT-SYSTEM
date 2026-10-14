@@ -13,6 +13,8 @@ export function summarize(a) {
   const p = a.payload;
   if (a.action_type === 'maintenance.approve_cost') return `Authorize ${fmtMoney(p.amount_minor, p.currency)} for the work order on this request`;
   if (a.action_type === 'finance.void_charge') return `Void a charge. Reason: “${p.reason}”`;
+  if (a.action_type === 'copilot.test_action') return `Record the note “${p.note}” in a test log. Nothing is sent or changed`;
+  if (a.action_type === 'copilot.send_rent_reminder' || a.action_type === 'copilot.send_tenant_message') return `Email the tenant “${p.subject}” — the exact text is shown below`;
   return a.action_label;
 }
 const targetLink = (a) => (a.action_type === 'maintenance.approve_cost' ? `#/maintenance/${a.payload.request_id}` : a.action_type === 'finance.void_charge' ? '#/finance/charges' : null);
@@ -80,6 +82,7 @@ function approvalDetail(ctx, id) {
           ['Record', link && h('a', { href: link }, 'Open the record')]])),
         section('Decision & result', dl([['Decided by', a.decided_by], ['Decided', a.decided_at && fmtTimestamp(a.decided_at)], ['Note', a.decision_note], ['Executed', a.executed_at && fmtTimestamp(a.executed_at)],
           ['Attempts', a.execution_attempts || null], ['Result', a.execution_result && h('code', {}, JSON.stringify(a.execution_result))]]))),
+      a.payload?.body ? section('The message that would be sent', h('div', {}, h('p', { class: 'muted small' }, a.action_type.startsWith('copilot.') ? 'Prepared with the AI copilot. Read the exact wording before approving.' : ''), h('p', {}, h('strong', {}, a.payload.subject)), h('p', { class: 'copilot-body' }, a.payload.body))) : null,
       section('Exactly what was proposed', h('div', {}, h('p', { class: 'muted small' }, 'This is the immutable proposal. Approval applies only to this exact content; changing it requires a new request.'),
         h('pre', { class: 'payload' }, JSON.stringify(a.payload, null, 2)), h('p', { class: 'muted small' }, `Fingerprint ${a.payload_hash.slice(0, 16)}… · idempotency key ${a.execution_key}`))),
       section('History', h('ol', { class: 'timeline' }, a.events.map((e) => h('li', {}, h('strong', {}, APPROVAL_STATUS[e.to_status] ?? e.to_status), h('div', { class: 'small muted' }, `${e.actor ?? 'System'} · ${fmtTimestamp(e.created_at)}`), e.note ? h('div', {}, e.note) : '')))));

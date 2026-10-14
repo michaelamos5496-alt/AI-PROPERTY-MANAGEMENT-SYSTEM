@@ -9,9 +9,11 @@ const patterns = [
   [/service_role/i, '"service_role" reference'],
   [/sb_secret_[A-Za-z0-9_-]+/, 'Supabase secret key'],
   [/SUPABASE_[A-Z_]+/, 'Supabase env var name'],
+  [/sk-ant-[A-Za-z0-9_-]{8,}/, 'Anthropic API key'],
+  [/ANTHROPIC_[A-Z_]+/, 'Anthropic env var name'],
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'private key'],
 ];
-const secretValues = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL']
+const secretValues = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'ANTHROPIC_API_KEY']
   .map((k) => process.env[k]).filter((v) => v && v.length >= 12);
 
 async function* walk(d) {

@@ -1,6 +1,7 @@
 import { del, get, patch, post, requireSession, signOut } from './api.js';
 import { clear, confirmDialog, copyText, emptyState, h, handleForm, openDialog, skeleton, toast } from './ui.js';
 import { approvalsView, notificationsView, operationsView } from './views/approvals.js';
+import { copilotView } from './views/copilot.js';
 import { financeView, paymentView, receiptView } from './views/finance.js';
 import { leaseView } from './views/leases.js';
 import { maintenanceDetailView, maintenanceListView, vendorsView } from './views/maintenance.js';
@@ -46,6 +47,7 @@ const routes = {
   finance: { label: 'Finance', view: (id) => financeView(ctx, id), needs: 'finance:read' },
   payments: { view: (id) => (id ? paymentView(ctx, id) : financeView(ctx, 'payments')), highlight: 'finance', needs: 'finance:read' },
   receipts: { view: (id) => receiptView(ctx, id), highlight: 'finance', needs: 'finance:read' },
+  copilot: { label: 'Copilot', view: (id) => copilotView(ctx, id), needs: 'copilot:use' },
   maintenance: { label: 'Maintenance', view: (id) => (id ? maintenanceDetailView(ctx, id) : maintenanceListView(ctx)), needs: 'maintenance:read' },
   approvals: { label: () => (pendingApprovals ? `Approvals (${pendingApprovals})` : 'Approvals'), view: (id) => approvalsView(ctx, id), needs: 'approvals:request' },
   vendors: { label: 'Vendors', view: () => vendorsView(ctx), needs: 'maintenance:read' },

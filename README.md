@@ -1,4 +1,4 @@
-# Property AI — Phases 1–4: foundation, properties and tenancies, rent ledger, operations
+# Property AI — Phases 1–5: foundation, properties and tenancies, rent ledger, operations, AI copilot
 
 Multi-tenant workspace: auth, organizations, roles, invitations. Node 20+/TypeScript API (Express 5) on Vercel,
 static HTML/CSS/vanilla-JS frontend, Supabase (Auth + Postgres with RLS).
@@ -81,6 +81,12 @@ downloaded by `npm install`) to prove behaviour under parallel connections.
 Maintenance requests and work orders with an enforced lifecycle, critical-issue escalation to a human, a verified tenant portal, a durable email queue with retries,
 idempotent reminder jobs, and a reusable approval engine with an inbox. Design, rules and limits: **docs/OPERATIONS.md**.
 Scheduled jobs need `SUPABASE_SERVICE_ROLE_KEY` + `CRON_SECRET` (server-side only), see `.env.example`.
+
+## Phase 5: AI copilot
+
+A dashboard copilot that answers from live records and prepares work for people to confirm or managers to approve. Works with no key
+(rules mode) or with Claude via `LLM_PROVIDER=anthropic`. The model can only call a fixed set of validated tools; the application and the
+database decide what is allowed. Design, security model, limits and configuration: **docs/COPILOT.md**.
 
 ## Known limitations (Phases 1–4)
 

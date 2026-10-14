@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "npm run build:web && tsx watch --env-file-if-exists=.env src/dev.ts",
+    "dev": "npm run build:web && tsx --env-file-if-exists=.env scripts/dev.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "build:web": "node scripts/build-web.mjs",

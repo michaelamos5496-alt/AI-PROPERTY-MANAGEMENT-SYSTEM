@@ -1,0 +1,13 @@
+node_modules/
+public/
+dist/
+.env
+.env.*
+!.env.example
+.vercel/
+test-results/
+playwright-report/
+supabase/.temp/
+supabase/.branches/
+.DS_Store
+*.log

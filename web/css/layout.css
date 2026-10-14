@@ -1,0 +1,38 @@
+.container { width: min(100% - 2rem, 70rem); margin-inline: auto; }
+.stack > * + * { margin-top: var(--space-4); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.row--between { justify-content: space-between; }
+.grid { display: grid; gap: var(--space-4); }
+.grid--stats { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+.stat__value { font-size: var(--text-2xl); font-weight: 700; line-height: 1; }
+.stat__label { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+/* Centered auth pages */
+.auth-page { min-height: 100vh; display: grid; place-items: center; padding: var(--space-5) var(--space-4); }
+.auth-card { width: min(100%, 26rem); }
+.auth-card .brand { margin-bottom: var(--space-5); }
+.auth-card h1 { font-size: var(--text-xl); }
+.auth-links { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-4); font-size: var(--text-sm); }
+
+/* Landing */
+.hero { padding: var(--space-8) 0 var(--space-7); max-width: 42rem; }
+.hero h1 { font-size: clamp(var(--text-2xl), 5vw, var(--text-3xl)); }
+.hero p { font-size: var(--text-lg); color: var(--color-text-muted); }
+
+/* App shell */
+.shell { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: var(--space-5); padding: var(--space-5); max-width: 76rem; margin-inline: auto; }
+.page-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--space-3); margin-bottom: var(--space-5); }
+.page-header h1 { margin: 0; }
+
+@media (max-width: 52rem) {
+  .shell { grid-template-columns: 1fr; padding: var(--space-4); gap: var(--space-4); }
+  .sidenav { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: var(--space-1); }
+  .topbar { padding: 0 var(--space-4); gap: var(--space-2); }
+  .topbar .hide-sm { display: none; }
+  .table th, .table td { padding: var(--space-2) var(--space-3); }
+}
+
+.mt-5 { margin-top: var(--space-5); }
+.row--end { align-items: end; }
+.field--grow { flex: 2; min-width: 14rem; margin: 0; }
+.field--role { flex: 1; min-width: 9rem; margin: 0; }

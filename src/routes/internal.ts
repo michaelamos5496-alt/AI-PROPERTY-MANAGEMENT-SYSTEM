@@ -7,6 +7,8 @@ import type { Logger } from '../lib/logger.js';
 import { runScheduledJobs } from '../jobs/runner.js';
 import type { EmailProvider } from '../services/email.js';
 import type { ServiceApi } from '../services/supabase.js';
+import { healthReport } from '../lib/health.js';
+import { sendAlert } from '../lib/alerts.js';
 import { runBilling } from '../billing/runtime.js';
 import type { BillingProvider } from '../billing/provider.js';
 import { z } from 'zod';
@@ -31,8 +33,24 @@ export function internalRoutes(env: Env, service: ServiceApi, provider: EmailPro
     if (whatsapp) result.errors.push(...whatsapp.errors.map((e) => `whatsapp ${e}`));
     const billing = only === 'jobs' || only === 'email' ? undefined : await runBilling(service, bill ?? null, log);
     if (billing) result.errors.push(...billing.errors.map((e) => `billing ${e}`));
+    await service.rpc('job_svc_heartbeat', { p_ok: result.errors.length === 0, p_error: result.errors.slice(0, 3).join('; ') || null }).catch((e) => log.warn('heartbeat not recorded', { error: String(e) }));
+    if (result.errors.length) await sendAlert(env, log, { key: 'jobs-failed', title: 'Scheduled jobs reported errors', lines: result.errors.slice(0, 8) });
     // A failing job must be visible to the scheduler, not silently swallowed.
     res.status(result.errors.length ? 500 : 200).json({ ok: result.errors.length === 0, ...result, ...(whatsapp ? { whatsapp } : {}), ...(billing ? { billing } : {}) });
+  });
+
+  const authorize = (req: import('express').Request) => {
+    if (!env.CRON_SECRET || !service.configured) throw new AppError(503, 'upstream_error', 'Health checks are not configured.');
+    const given = (req.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+    if (!timingSafeEqual(digest(given), digest(env.CRON_SECRET))) throw AppError.unauthenticated('Invalid credentials.');
+  };
+  // Full health, for the monitor. ?probe=1 also calls each external integration; ?alert=1 posts to ALERT_WEBHOOK_URL when anything is wrong.
+  // Status code 200 = ok, 503 = degraded or down, so a plain uptime checker can alert on it.
+  r.get('/health', async (req, res) => {
+    authorize(req);
+    const report = await healthReport(env, service, { probe: req.query.probe === '1' });
+    if (req.query.alert === '1' && report.status !== 'ok') await sendAlert(env, log, { key: `health:${report.problems.join('|').slice(0, 200)}`, title: `Health is ${report.status}`, lines: report.problems });
+    res.status(report.status === 'ok' ? 200 : 503).json(report);
   });
 
   // Operator actions (not reachable with a user session): assign a plan by hand, set an exception. Same credential as the scheduler.

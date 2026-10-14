@@ -13,7 +13,7 @@ const noBody = z.object({});
 const vendorUpdate = S.vendorBody.extend({ expectedVersion: S.version });
 
 /** Organization-scoped (staff) endpoints for maintenance, vendors, approvals, delivery and tenant-portal administration. */
-const orgDefs: Def[] = [
+export const opsOrgDefs: Def[] = [
   // maintenance requests
   { method: 'get', path: '/maintenance', min: 'staff', fn: 'list_requests', query: S.requestsQuery },
   { method: 'post', path: '/maintenance', min: 'staff', fn: 'create_maintenance_request', body: S.maintCreateBody, status: 201 },
@@ -67,13 +67,13 @@ const orgDefs: Def[] = [
 ];
 
 /** Endpoints that act on the signed-in user's own data (staff or tenant), with no organization role. */
-const userDefs: Def[] = [
+export const opsUserDefs: Def[] = [
   { method: 'get', path: '/notifications', min: 'viewer', scope: 'user', fn: 'list_my_notifications', query: S.notificationsQuery },
   { method: 'post', path: '/notifications/read', min: 'viewer', scope: 'user', fn: 'mark_my_notifications_read', body: S.markReadBody },
 ];
 
 /** Tenant portal: the caller must be a verified tenant; the database decides, per call, whether they may see or do the thing. */
-const portalDefs: Def[] = [
+export const opsPortalDefs: Def[] = [
   { method: 'get', path: '/context', min: 'viewer', scope: 'user', fn: 'portal_context' },
   { method: 'get', path: '/requests', min: 'viewer', scope: 'user', fn: 'portal_list_requests' },
   { method: 'get', path: '/orgs/:orgId/urgency-levels', min: 'viewer', scope: 'portal', fn: 'portal_urgency_levels' },
@@ -110,7 +110,7 @@ function attachmentRoutes(r: Router, data: DataApi, storage: StorageApi, gate: R
 
 export function opsRoutes(env: Env, data: DataApi, storage: StorageApi, opts: MountOptions): Router {
   const r = Router({ mergeParams: true });
-  mountDefs(r, orgDefs, data, opts);
+  mountDefs(r, opsOrgDefs, data, opts);
   attachmentRoutes(r, data, storage, [requireOrgRole(data, 'staff')], (req) => req.org.id, '/maintenance/:request', '/attachments');
 
   // Inviting a tenant to the portal: the raw token is shown once and only its hash is stored.
@@ -125,13 +125,13 @@ export function opsRoutes(env: Env, data: DataApi, storage: StorageApi, opts: Mo
 
 export function userRoutes(data: DataApi, opts: MountOptions): Router {
   const r = Router();
-  mountDefs(r, userDefs, data, opts);
+  mountDefs(r, opsUserDefs, data, opts);
   return r;
 }
 
 export function portalRoutes(data: DataApi, storage: StorageApi, opts: MountOptions): Router {
   const r = Router();
-  mountDefs(r, portalDefs, data, opts);
+  mountDefs(r, opsPortalDefs, data, opts);
   attachmentRoutes(r, data, storage, [], (req) => req.params.orgId, '/orgs/:orgId/requests/:request', '/orgs/:orgId/attachments');
   r.post('/invitations/accept', validate({ body: S.tokenBody }), async (req, res) => {
     res.json(await data.rpc(req.auth!.token, 'accept_tenant_invitation', { p_token_hash: sha256(req.body.token) }));

@@ -3,30 +3,51 @@ on:
   push: { branches: [main] }
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       SUPABASE_URL: https://ci-placeholder.supabase.co
       SUPABASE_ANON_KEY: ci-placeholder-anon-key-not-a-secret
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }                      # the migration check compares with main
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - name: Unit, API, database policy and concurrency tests (real PostgreSQL via embedded binary)
+      - name: Migration safety (ordering, immutability of shipped migrations, destructive statements need a reviewed marker)
+        run: BASE_REF=origin/main node scripts/check-migrations.mjs
+      - name: Dependency audit (production dependencies; fails on high or critical)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Unit, API, authorization matrix, security invariants, database policy and concurrency tests (real PostgreSQL via embedded binary)
         run: npm test
       - name: Production build and client secret scan
         run: npm run build
+      - name: Database load test (smoke scale: proves the harness and catches gross regressions; run `npm run load` for the full report)
+        run: npm run load:smoke
+      - name: Backup and point-in-time-recovery drill
+        run: npx tsx scripts/restore-drill.ts
       - run: npx playwright install --with-deps chromium
       - name: Playwright
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with: { name: playwright-report, path: playwright-report/ }
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
 
   # Applies the migrations to a real Supabase stack (twice, to prove they are repeatable).
   migrations:
@@ -40,3 +61,7 @@ jobs:
       - run: supabase db reset
       - name: Re-apply migrations (idempotency)
         run: for f in supabase/migrations/*.sql; do psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q -f "$f"; done
+      - name: The internal schema is not exposed through the API
+        run: |
+          set -e
+          grep -q 'schemas = \["public"' supabase/config.toml || { echo "supabase/config.toml must expose only the public schema to the API"; exit 1; }

@@ -1,0 +1,45 @@
+name: Nightly logical backup
+# An INDEPENDENT copy of the production database, in addition to Supabase's own backups / point-in-time recovery.
+# Inert until the secrets below exist in the "production" environment. Dumps are encrypted before they leave the runner.
+on:
+  schedule: [{ cron: '17 2 * * *' }]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 60
+    env:
+      BACKUP_DB_URL: ${{ secrets.BACKUP_DB_URL }}                 # read-only role, connection string via the Supabase pooler (session mode)
+      BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}   # public key; the private key lives offline with the people allowed to restore
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET }}
+      BACKUP_S3_URL: ${{ secrets.BACKUP_S3_URL }}                 # s3://bucket/prefix  (versioned, private, lifecycle: keep 35 days)
+      BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}       # for R2/B2/MinIO; leave empty for AWS
+    steps:
+      - name: Skip when not configured
+        id: cfg
+        run: |
+          if [ -z "$BACKUP_DB_URL" ] || [ -z "$BACKUP_AGE_RECIPIENT" ] || [ -z "$BACKUP_S3_URL" ]; then echo "Backup secrets are not configured; skipping."; echo "run=false" >> "$GITHUB_OUTPUT"; else echo "run=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Install tools
+        if: steps.cfg.outputs.run == 'true'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17 age awscli
+      - name: Dump (custom format, all schemas the app owns), encrypt, upload, verify the upload
+        if: steps.cfg.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          umask 077
+          f="pai-$(date -u +%Y%m%dT%H%M%SZ).dump"
+          pg_dump "$BACKUP_DB_URL" --format=custom --no-owner --no-privileges --schema=public --schema=app --schema=auth --schema=storage -f "$f"
+          pg_restore --list "$f" > /dev/null                       # the archive is readable
+          age -r "$BACKUP_AGE_RECIPIENT" -o "$f.age" "$f"
+          shred -u "$f"
+          ep=""; [ -n "${BACKUP_S3_ENDPOINT:-}" ] && ep="--endpoint-url $BACKUP_S3_ENDPOINT"
+          aws s3 cp $ep "$f.age" "$BACKUP_S3_URL/$f.age"
+          aws s3 ls $ep "$BACKUP_S3_URL/$f.age" | grep -q "$f.age"   # it is really there
+          echo "backup $f.age uploaded ($(stat -c %s "$f.age") bytes)"

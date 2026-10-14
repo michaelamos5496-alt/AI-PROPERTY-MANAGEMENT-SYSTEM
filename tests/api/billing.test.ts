@@ -19,7 +19,7 @@ const fakeFetch: typeof fetch = (async (url: any, init: any) => {
 
 beforeAll(async () => {
   wa = new FakeWhatsApp();
-  t = await startTestApp({ RATE_LIMIT_FINANCE_MAX: '5000', BILLING_PROVIDER: 'paystack', PAYSTACK_SECRET_KEY: KEY, BILLING_PAYSTACK_CURRENCIES: 'NGN,USD', WHATSAPP_APP_SECRET: APP_SECRET, WHATSAPP_VERIFY_TOKEN: VERIFY_TOKEN },
+  t = await startTestApp({ RATE_LIMIT_FINANCE_MAX: '5000', BILLING_PROVIDER: 'paystack', PAYSTACK_SECRET_KEY: KEY, BILLING_PAYSTACK_CURRENCIES: 'NGN,USD', WHATSAPP_APP_SECRET: APP_SECRET, WHATSAPP_VERIFY_TOKEN: VERIFY_TOKEN, WHATSAPP_INLINE_BUDGET_MS: '8000' },
     {}, { billing: (env) => new PaystackProvider(env, fakeFetch), llm: new OfflineProvider(), whatsapp: wa });
 });
 afterAll(() => t.close());

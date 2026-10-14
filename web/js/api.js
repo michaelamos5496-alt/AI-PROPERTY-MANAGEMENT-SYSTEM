@@ -36,7 +36,9 @@ export const del = (p) => api('DELETE', p);
 
 /** Only same-site absolute paths are valid post-login destinations (no open redirects). */
 export function safeNext(value, fallback = '/app') {
-  return typeof value === 'string' && /^\/(?![/\\])/.test(value) ? value : fallback;
+  // Browsers strip tabs and newlines inside URLs, so "/\t/evil.com" would become "//evil.com": anything but plain path characters is refused.
+  // eslint-disable-next-line no-control-regex
+  return typeof value === 'string' && value.length < 2048 && /^\/(?![/\\])[^\s\\\x00-\x1f\x7f]*$/.test(value) ? value : fallback;
 }
 
 /** Where a signed-in user belongs. */

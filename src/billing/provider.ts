@@ -82,7 +82,7 @@ export class PaystackProvider implements BillingProvider {
 
   async initializeCheckout(i: Parameters<BillingProvider['initializeCheckout']>[0]) {
     const d = await this.call('/transaction/initialize', { method: 'POST', body: JSON.stringify({ email: i.email, amount: i.amountMinor, currency: i.currency, reference: i.reference, callback_url: i.callbackUrl, metadata: i.metadata, ...(i.planRef ? { plan: i.planRef } : {}) }) });
-    const url = str(d?.authorization_url, 1000); if (!url || !/^https:\/\//.test(url)) throw new BillingError('The billing provider did not return a checkout link.', 'provider');
+    const url = str(d?.authorization_url, 1000); if (!url || !/^https:\/\/([a-z0-9-]+\.)*paystack\.(com|co)(\/|$)/i.test(url)) throw new BillingError('The billing provider did not return a checkout link.', 'provider');
     return { url };
   }
 

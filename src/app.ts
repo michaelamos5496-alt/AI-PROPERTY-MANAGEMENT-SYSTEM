@@ -59,7 +59,14 @@ export function createApp({ env, fetch: f = fetch, logger, emailProvider, llm, w
   app.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
   app.use(csrfGuard(env));
 
-  app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  app.get('/api/health', (_req, res) => res.json({ ok: true }));                       // liveness: the process is up
+  // Readiness: can this instance reach its database? Public and tiny: no details, nothing a stranger can learn from it.
+  app.get('/api/health/ready', rateLimit({ name: 'ready', windowSeconds: 60, max: 60 }), async (_req, res) => {
+    const ok = service.configured
+      ? await service.rpc('health_svc_check', {}).then(() => true, () => false)
+      : await f(`${env.SUPABASE_URL}/auth/v1/health`, { headers: { apikey: env.SUPABASE_ANON_KEY }, signal: AbortSignal.timeout(4000) }).then((r) => r.ok, () => false);
+    res.status(ok ? 200 : 503).json({ ok });
+  });
   app.use('/api/internal', internalRoutes(env, service, provider, log, wa, bill));
   app.use('/api/auth', authRoutes(env, auth));
   // One authenticated router so the session is verified exactly once per request.

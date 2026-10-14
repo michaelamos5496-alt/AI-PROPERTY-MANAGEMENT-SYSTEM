@@ -12,7 +12,7 @@ import type { DataApi, StorageApi } from '../services/supabase.js';
 const withVersion = <T extends z.ZodRawShape>(shape: T) => z.object({ expectedVersion: S.version, ...shape });
 const asVersioned = (schema: z.ZodObject<any>) => withVersion(schema.shape);
 
-const defs: Def[] = [
+export const recordDefs: Def[] = [
   // properties
   { method: 'get', path: '/properties', min: 'viewer', fn: 'list_properties', query: S.listQuery },
   { method: 'post', path: '/properties', min: 'manager', fn: 'create_property', body: S.propertyBody, status: 201 },
@@ -74,7 +74,7 @@ export function recordRoutes(_env: Env, data: DataApi, storage: StorageApi): Rou
 
   r.post('/tenants', ...normalizePhones(data, ['phone', 'emergencyPhone']));
   r.patch('/tenants/:tenant', ...normalizePhones(data, ['phone', 'emergencyPhone']));
-  mountDefs(r, defs, data);
+  mountDefs(r, recordDefs, data);
 
   // ---- lease documents: metadata in Postgres, bytes in private Storage -----------------------
   r.get('/leases/:lease/documents', requireOrgRole(data, 'staff'), validate({ params: z.object({ lease: uuid }).passthrough() }),

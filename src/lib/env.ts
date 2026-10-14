@@ -64,6 +64,8 @@ const schema = z.object({
   PAYSTACK_SECRET_KEY: z.string().min(10).optional(),
   /** Currencies your Paystack account is actually enabled to charge. Confirm with Paystack; do not assume NGN, GHS and KES all work. */
   BILLING_PAYSTACK_CURRENCIES: z.string().default('NGN').transform((v) => v.split(',').map((x) => x.trim().toUpperCase()).filter(Boolean)),
+  /** Slack-compatible incoming webhook (or any URL that accepts {"text": …}). Receives operational alerts: failed jobs, dead letters, unhealthy integrations. */
+  ALERT_WEBHOOK_URL: url.optional(),
   /** Refresh-cookie lifetime in days. */
   SESSION_DAYS: z.coerce.number().int().min(1).max(90).default(14),
 });

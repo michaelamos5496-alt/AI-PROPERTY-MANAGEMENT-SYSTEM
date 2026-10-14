@@ -7,7 +7,7 @@ import type { DataApi } from '../services/supabase.js';
 import { mountDefs, type Def } from './defs.js';
 
 const noBody = z.object({});
-const defs: Def[] = [
+export const financeDefs: Def[] = [
   // recurring rent
   { method: 'post', path: '/tenancies/:tenancy/rent-schedules', min: 'manager', fn: 'create_rent_schedule', body: S.scheduleBody, status: 201 },
   { method: 'post', path: '/rent-schedules/:schedule/stop', min: 'manager', fn: 'stop_rent_schedule', body: S.reasonBody },
@@ -46,6 +46,6 @@ export function financeRoutes(env: Env, data: DataApi): Router {
   // Money-moving requests get their own, tighter per-user budget on top of the global limiter.
   const writes = rateLimit({ name: 'finance-write', windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS, max: env.RATE_LIMIT_FINANCE_MAX, key: (req) => req.auth?.user.id ?? req.ip ?? 'anon' });
   r.use((req, res, next) => (req.method === 'GET' ? next() : writes(req, res, next)));
-  mountDefs(r, defs, data);
+  mountDefs(r, financeDefs, data);
   return r;
 }

@@ -9,3 +9,8 @@ enable_signup = true
 [auth.email]
 enable_confirmations = true
 double_confirm_changes = true
+
+[api]
+# The internal `app` schema must never be reachable through the REST API. Only `public` is exposed.
+schemas = ["public"]
+extra_search_path = ["public"]

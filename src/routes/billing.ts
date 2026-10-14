@@ -19,7 +19,7 @@ const marketBody = z.object({
 const checkoutBody = z.object({ planCode: z.string().regex(/^[a-z][a-z0-9_]{1,30}$/), interval: z.enum(['monthly', 'annual']).default('monthly'), currency: z.string().regex(/^[A-Z]{3}$/) }).strict();
 const noBody = z.object({});
 
-const defs: Def[] = [
+export const billingDefs: Def[] = [
   { method: 'get', path: '/entitlements', min: 'staff', fn: 'get_entitlements' },
   { method: 'get', path: '/market', min: 'viewer', fn: 'get_market' },
   { method: 'put', path: '/market', min: 'admin', fn: 'save_market', body: marketBody },
@@ -28,7 +28,7 @@ const defs: Def[] = [
 /** Plans, usage, checkout, market settings and exports. Authorization is checked here (fast fail) and again in the database. */
 export function billingRoutes(env: Env, data: DataApi, service: ServiceApi, provider: BillingProvider | null): Router {
   const r = Router({ mergeParams: true });
-  mountDefs(r, defs, data);
+  mountDefs(r, billingDefs, data);
 
   r.get('/billing', requireOrgRole(data, 'admin'), async (req, res) => {
     const b = await data.rpc<any>(req.auth!.token, 'get_billing', { p_org: req.org!.id });

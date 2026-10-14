@@ -18,7 +18,7 @@ const settingsBody = z.object({
 const actionsQuery = z.object({ conversation: uuid.optional(), scope: z.enum(['mine', 'org']).optional(), limit: z.coerce.number().int().min(1).max(100).optional() }).strict();
 const messageBody = z.object({ content: z.string().trim().min(1, 'Type a question.').max(4000) }).strict();
 
-const defs: Def[] = [
+export const copilotDefs: Def[] = [
   { method: 'get', path: '/copilot/conversations', min: 'staff', fn: 'list_copilot_conversations' },
   { method: 'post', path: '/copilot/conversations', min: 'staff', fn: 'create_copilot_conversation', body: noBody, status: 201 },
   { method: 'get', path: '/copilot/conversations/:conversation', min: 'staff', fn: 'get_copilot_conversation' },
@@ -42,7 +42,7 @@ export function copilotRoutes(env: Env, data: DataApi, service: ServiceApi, llm:
       externalSwitchOn: env.COPILOT_EXTERNAL_ENABLED, externalEffective: env.COPILOT_EXTERNAL_ENABLED && !!settings.external_enabled,
     });
   });
-  mountDefs(r, defs, data, opts);
+  mountDefs(r, copilotDefs, data, opts);
   r.post('/copilot/conversations/:conversation/messages',
     requireOrgRole(data, 'staff'),
     rateLimit({ name: 'copilot-turn', windowSeconds: 60, max: 12, key: (req) => req.auth?.user.id ?? req.ip ?? 'anon' }),

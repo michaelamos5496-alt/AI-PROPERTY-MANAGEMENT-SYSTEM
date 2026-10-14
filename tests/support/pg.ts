@@ -16,12 +16,12 @@ const freePort = () => new Promise<number>((resolve, reject) => {
  * A REAL PostgreSQL server (embedded binary) with true parallel connections, used where in-process
  * Postgres (single connection) cannot prove concurrency behaviour: row locks, races, deadlocks.
  */
-export async function startPostgres() {
+export async function startPostgres(opts: { flags?: string[]; keep?: boolean; dir?: string } = {}) {
   const port = await freePort();
-  const dir = mkdtempSync(join(tmpdir(), 'pai-pg-'));
+  const dir = opts.dir ?? mkdtempSync(join(tmpdir(), 'pai-pg-'));
   const server = new EmbeddedPostgres({
-    databaseDir: dir, user: 'postgres', password: 'pw', port, persistent: false,
-    postgresFlags: ['-c', 'max_connections=200', '-c', 'deadlock_timeout=200ms', '-c', 'fsync=off'],
+    databaseDir: dir, user: 'postgres', password: 'pw', port, persistent: !!opts.keep,
+    postgresFlags: ['-c', 'max_connections=200', '-c', 'deadlock_timeout=200ms', '-c', 'fsync=off', ...(opts.flags ?? [])],
     onLog: () => {}, onError: () => {},
   });
   await server.initialise();
@@ -76,9 +76,9 @@ export async function startPostgres() {
     return { sub: r.rows[0].id as string, email };
   };
   return {
-    pool, admin, as, call, svc, svcCall, createUser, port,
+    pool, admin, as, call, svc, svcCall, createUser, port, dir,
     version: async () => (await admin.query('show server_version')).rows[0].server_version as string,
-    stop: async () => { await pool.end().catch(() => {}); await admin.end().catch(() => {}); await server.stop().catch(() => {}); rmSync(dir, { recursive: true, force: true }); },
+    stop: async () => { await pool.end().catch(() => {}); await admin.end().catch(() => {}); await server.stop().catch(() => {}); if (!opts.keep) rmSync(dir, { recursive: true, force: true }); },
   };
 }
 export type Pg = Awaited<ReturnType<typeof startPostgres>>;

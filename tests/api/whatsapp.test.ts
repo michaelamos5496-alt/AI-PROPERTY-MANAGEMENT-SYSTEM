@@ -7,7 +7,7 @@ import { APP_SECRET, VERIFY_TOKEN, FakeWhatsApp, deliver, msgId, sign, waStatus,
 let t: TestApp; let fake: FakeWhatsApp;
 beforeAll(async () => {
   fake = new FakeWhatsApp();
-  t = await startTestApp({ RATE_LIMIT_FINANCE_MAX: '5000', WHATSAPP_APP_SECRET: APP_SECRET, WHATSAPP_VERIFY_TOKEN: VERIFY_TOKEN, COPILOT_EXTERNAL_ENABLED: 'true', WHATSAPP_INBOUND_MAX_PER_10MIN: '8' }, {}, { whatsapp: fake });
+  t = await startTestApp({ RATE_LIMIT_FINANCE_MAX: '5000', WHATSAPP_APP_SECRET: APP_SECRET, WHATSAPP_VERIFY_TOKEN: VERIFY_TOKEN, COPILOT_EXTERNAL_ENABLED: 'true', WHATSAPP_INBOUND_MAX_PER_10MIN: '8', WHATSAPP_INLINE_BUDGET_MS: '8000' }, {}, { whatsapp: fake });
 });
 afterAll(() => t.close());
 

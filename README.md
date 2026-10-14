@@ -1,4 +1,4 @@
-# Property AI — Phases 1–7: foundation, properties and tenancies, rent ledger, operations, AI copilot, WhatsApp assistant, plans and markets
+# Property AI — Phases 1–8: foundation, properties and tenancies, rent ledger, operations, AI copilot, WhatsApp assistant, plans and markets, production readiness
 
 Multi-tenant workspace: auth, organizations, roles, invitations. Node 20+/TypeScript API (Express 5) on Vercel,
 static HTML/CSS/vanilla-JS frontend, Supabase (Auth + Postgres with RLS).
@@ -99,6 +99,12 @@ verified identity linking, consent/opt-out, template and 24-hour-window rules, d
 Database-enforced plan limits (properties, units, seats, storage, AI requests, WhatsApp conversations, exports), subscription lifecycle,
 a billing-provider adapter (Paystack; **integration pending live verification**), and country/currency/time-zone/phone settings for GHS, NGN and KES.
 No legal or tenancy rules are built in. See **docs/BILLING.md** and **docs/MARKETS.md**.
+
+## Phase 8: production readiness
+
+Security audit, authorization sweeps, load test, backup/restore drill, health checks, deployment and incident documents.
+**Current verdict: not production-ready; see docs/RELEASE_REPORT.md for the measured results and the open launch blockers.**
+Documents: `docs/SECURITY_AUDIT.md`, `docs/DEPLOYMENT.md`, `docs/BACKUP_RECOVERY.md`, `docs/RELEASE.md` (launch checklist, rollback, incident response, post-launch monitoring), `docs/LOAD_TEST_RESULTS.md`, `docs/RESTORE_DRILL_RESULTS.md`.
 
 ## Known limitations (Phases 1–4)
 

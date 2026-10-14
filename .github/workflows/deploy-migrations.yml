@@ -1,0 +1,48 @@
+name: Deploy database migrations
+# Manual, per environment. Production requires the reviewers configured on the "production" GitHub environment.
+# Order of use: staging first, verify, then production. Every run starts with a dry run and a logged diff.
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        type: choice
+        options: [staging, production]
+        required: true
+      confirm_backup:
+        description: "Production only: type YES once you have confirmed a recent backup / PITR is healthy"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}                # secrets and required reviewers are scoped to the environment
+    timeout-minutes: 20
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Guard rails
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ] && [ "${{ inputs.confirm_backup }}" != "YES" ]; then echo "Production deploys need confirm_backup=YES"; exit 1; fi
+          if [ "${{ github.ref }}" != "refs/heads/main" ] && [ "${{ inputs.environment }}" = "production" ]; then echo "Production migrations deploy from main only"; exit 1; fi
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Migration safety lint
+        run: BASE_REF=origin/main node scripts/check-migrations.mjs
+      - run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+      - name: Dry run (shows exactly which migrations would be applied)
+        run: supabase db push --dry-run
+      - name: Apply
+        run: supabase db push
+      - name: Verify the application's health after the change
+        env: { APP_URL: "${{ vars.APP_URL }}", CRON_SECRET: "${{ secrets.CRON_SECRET }}" }
+        run: |
+          curl --fail-with-body -sS "$APP_URL/api/health/ready"
+          curl --fail-with-body -sS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/internal/health"

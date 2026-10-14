@@ -22,7 +22,7 @@ const contactsQuery = z.object({ status: nul(z.enum(['unverified', 'verified', '
 const handoffQuery = z.object({ status: z.enum(['open', 'resolved']).optional() }).strict();
 const noBody = z.object({});
 
-const defs: Def[] = [
+export const whatsappDefs: Def[] = [
   { method: 'put', path: '/whatsapp/channel', min: 'admin', fn: 'save_wa_channel', body: channelBody },
   { method: 'get', path: '/whatsapp/faqs', min: 'manager', fn: 'list_wa_faqs' },
   { method: 'post', path: '/whatsapp/faqs', min: 'admin', fn: 'save_wa_faq', body: faqBody, extra: { faq: null }, status: 201 },
@@ -48,7 +48,7 @@ export function whatsappRoutes(env: Env, data: DataApi, service: ServiceApi, pro
     res.json({ ...c, server: { provider: providerName, webhookUrl: `${env.APP_URL}/api/webhooks/whatsapp`, verifyTokenConfigured: !!env.WHATSAPP_VERIFY_TOKEN, appSecretConfigured: !!env.WHATSAPP_APP_SECRET,
       accessTokenConfigured: !!env.WHATSAPP_ACCESS_TOKEN, serviceConfigured: service.configured, externalSwitchOn: env.COPILOT_EXTERNAL_ENABLED, graphVersion: env.WHATSAPP_GRAPH_VERSION } });
   });
-  mountDefs(r, defs, data, opts);
+  mountDefs(r, whatsappDefs, data, opts);
 
   // The code is shown once, to the person who asked for it. Only its hash is stored.
   r.post('/whatsapp/link-codes', requireOrgRole(data, 'manager'), validate({ body: z.object({ tenantId: uuid }).strict() }), async (req, res) => {

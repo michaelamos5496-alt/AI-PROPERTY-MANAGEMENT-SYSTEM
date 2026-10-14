@@ -3,25 +3,126 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Property AI · Property management workspace</title>
-  <meta name="description" content="A secure, multi-tenant workspace for property management teams.">
+  <title>Property AI · Run your rentals with a team that never drops the ball</title>
+  <meta name="description" content="Rent ledger, maintenance, tenant portal, WhatsApp and an AI assistant that prepares the work and asks a person before anything happens. Built for landlords and agents in Ghana, Nigeria, Kenya and beyond.">
+  <meta property="og:title" content="Property AI">
+  <meta property="og:description" content="Rent, maintenance and tenants in one workspace. The AI prepares; people approve.">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#1f5fd6">
   <link rel="stylesheet" href="/assets/main.css">
 </head>
-<body>
+<body class="landing">
   <a class="skip-link" href="#content">Skip to content</a>
-  <header class="topbar">
+  <header class="topbar landing__bar">
     <a class="brand" href="/"><span class="brand__mark" aria-hidden="true">P</span> Property AI</a>
+    <nav class="landing__nav" aria-label="Page sections">
+      <a href="#features">Features</a><a href="#how">How it works</a><a href="#trust">Trust</a><a href="#faq">FAQ</a>
+    </nav>
     <span class="topbar__spacer"></span>
     <a class="btn btn--ghost btn--sm" href="/login">Sign in</a>
-    <a class="btn btn--sm" href="/register">Get started</a>
+    <a class="btn btn--sm" href="/register">Start free trial</a>
   </header>
-  <main id="content" class="container">
-    <section class="hero">
-      <h1>One secure workspace for your whole property team.</h1>
-      <p>Create an organization, invite your people, and control exactly who can see and change what.</p>
-      <div class="row"><a class="btn" href="/register">Create your workspace</a><a class="btn btn--secondary" href="/login">Sign in</a></div>
+
+  <main id="content">
+    <section class="l-hero container">
+      <div class="l-hero__copy">
+        <p class="l-badge">Early access · 14-day free trial</p>
+        <h1>Run your rentals without the spreadsheets, the chasing, or the guesswork.</h1>
+        <p class="l-lead">One workspace for your rent ledger, repairs, tenants and team. An AI assistant answers from your live records and prepares the work, then <strong>waits for a person to say yes</strong> before anything is sent or changed.</p>
+        <div class="row l-cta">
+          <a class="btn btn--lg" href="/register">Create your workspace</a>
+          <a class="btn btn--secondary btn--lg" href="#how">See how it works</a>
+        </div>
+        <p class="l-fine muted small">No card needed to start. Your data stays yours: every organization is isolated from every other.</p>
+      </div>
+
+      <div class="l-preview" role="img" aria-label="Illustration of the Property AI dashboard: an AI answer about overdue rent with a draft reminder waiting for approval">
+        <div class="l-win">
+          <div class="l-win__bar"><span></span><span></span><span></span></div>
+          <div class="l-win__body">
+            <div class="l-chat l-chat--you">Who is overdue on rent?</div>
+            <div class="l-chat l-chat--ai">
+              <strong>3 tenancies overdue as of today</strong>
+              <div class="l-row"><span>Ama Mensah · Cedi Court 2B</span><b>1,500.00 GHS</b></div>
+              <div class="l-row"><span>Chidi Okoro · Lekki Plaza 4A</span><b>45,000.00 NGN</b></div>
+              <div class="l-row"><span>Wanjiru Kamau · Westlands 1C</span><b>32,000.00 KES</b></div>
+              <small>Basis: unpaid charges past due date. Each currency kept separate.</small>
+            </div>
+            <div class="l-approval">
+              <div><strong>Draft reminder to Ama Mensah</strong><small>Nothing has been sent</small></div>
+              <span class="l-pill">Waiting for a manager</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="l-strip" aria-label="Where it works">
+      <div class="container l-strip__in">
+        <span>Built for</span><b>GHS</b><b>NGN</b><b>KES</b><b>USD</b><span class="muted">· exact money in minor units · each property keeps its own time zone</span>
+      </div>
+    </section>
+
+    <section id="features" class="l-sec container">
+      <h2>Everything a small portfolio needs, nothing it doesn't</h2>
+      <p class="l-sub">Start with properties and rent. Add the rest when you are ready.</p>
+      <div class="l-grid">
+        <article class="l-card"><h3>Rent ledger you can trust</h3><p>Charges, payments and allocations that can never be edited, only reversed, so the history always adds up. Balances per tenant and per property, in each currency.</p></article>
+        <article class="l-card"><h3>Maintenance that gets handled</h3><p>Tenants report problems, staff triage, work is assigned and approved, and urgent issues like gas leaks alert a named person immediately.</p></article>
+        <article class="l-card"><h3>Tenant portal</h3><p>Tenants see their own requests and report new ones with photos. They never see anyone else's information.</p></article>
+        <article class="l-card"><h3>WhatsApp assistant</h3><p>Tenants message your business number to report repairs and get answers you approved. Anything sensitive goes straight to a person. <span class="muted">Connecting your number takes a Meta business account.</span></p></article>
+        <article class="l-card"><h3>AI copilot with a safety catch</h3><p>Ask "who is overdue?" or "leases ending in 60 days?" and get an answer from your real records, with the basis and links. It can draft and prepare; it cannot send, approve or pay.</p></article>
+        <article class="l-card"><h3>Approvals and an audit trail</h3><p>Sensitive actions need a second person. Every change is recorded: who, what, when, and what it looked like before.</p></article>
+      </div>
+    </section>
+
+    <section id="how" class="l-sec l-sec--alt">
+      <div class="container">
+        <h2>From sign-up to first rent run in an afternoon</h2>
+        <ol class="l-steps">
+          <li><span class="l-num">1</span><h3>Set up your portfolio</h3><p>Add properties and units, choose your country and currency, invite your team with the right role for each person.</p></li>
+          <li><span class="l-num">2</span><h3>Bring in tenants and rent</h3><p>Record tenancies and rent schedules. Charges are generated on schedule and payments are matched to the oldest charge first.</p></li>
+          <li><span class="l-num">3</span><h3>Let the assistant prepare, you decide</h3><p>Reminders, requests and reports are drafted for you. A person confirms; a manager approves the sensitive ones. Everything is logged.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="trust" class="l-sec container">
+      <h2>Careful with other people's money and data</h2>
+      <p class="l-sub">These are things the system does, each one covered by automated tests, not promises.</p>
+      <div class="l-grid l-grid--2">
+        <article class="l-card"><h3>Your data is walled off</h3><p>Every record belongs to one organization and the database itself refuses cross-organization access, even if the application had a bug.</p></article>
+        <article class="l-card"><h3>The AI proposes, people decide</h3><p>Messages that go to tenants are the exact text a person read. Approvals need a different person, and they are withdrawn if the facts change.</p></article>
+        <article class="l-card"><h3>Plans that never lock you out</h3><p>If a plan lapses you keep full access to your data. Only adding more than the free limits pauses.</p></article>
+        <article class="l-card"><h3>Honest about what's new</h3><p>Property AI is in early access. We are verifying integrations one by one and say so in the product. We don't build country-specific legal rules without qualified review.</p></article>
+      </div>
+    </section>
+
+    <section id="faq" class="l-sec l-sec--alt">
+      <div class="container l-faq">
+        <h2>Questions</h2>
+        <details><summary>Does the AI send messages to my tenants by itself?</summary><p>No. It can draft a message. A person must request it and a different person with manager rights must approve it. Emailing or messaging tenants is off until you switch it on.</p></details>
+        <details><summary>Which currencies and countries are supported?</summary><p>Money is stored exactly in each currency's smallest unit. Ghana cedi, Nigerian naira, Kenyan shilling and US dollar are tested; other currencies work for ledgers. Online payment of your subscription depends on what our payment provider enables for your currency, and is not switched on yet; we assign plans by hand during early access.</p></details>
+        <details><summary>Do my tenants need an app?</summary><p>No. They use a web page or WhatsApp. A tenant's WhatsApp number is linked to them with a one-time code you give them, so a phone number alone never unlocks anyone's account details.</p></details>
+        <details><summary>What happens to my data if I stop paying?</summary><p>Nothing is deleted. You keep read and edit access to what you have; you simply can't add more than the free plan allows until you choose a plan again.</p></details>
+        <details><summary>Is it production-ready?</summary><p>It is in early access. The core is tested heavily, and we are completing verification with each external provider and independent security review before we call it generally available. Ask us for the current status.</p></details>
+      </div>
+    </section>
+
+    <section class="l-final container">
+      <h2>Try it with your own portfolio</h2>
+      <p class="l-sub">Free for 14 days. Cancel by doing nothing.</p>
+      <div class="row l-cta l-cta--center"><a class="btn btn--lg" href="/register">Create your workspace</a><a class="btn btn--secondary btn--lg" href="/login">Sign in</a></div>
     </section>
   </main>
+
+  <footer class="l-foot">
+    <div class="container l-foot__in">
+      <a class="brand" href="/"><span class="brand__mark" aria-hidden="true">P</span> Property AI</a>
+      <nav aria-label="Footer"><a href="/login">Sign in</a><a href="/register">Create account</a><a href="#faq">FAQ</a></nav>
+      <p class="muted small">© Property AI. Early access software; not legal, tax or financial advice.</p>
+    </div>
+  </footer>
   <script type="module" src="/assets/home.js"></script>
 </body>
 </html>

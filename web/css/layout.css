@@ -15,9 +15,6 @@
 .auth-links { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-4); font-size: var(--text-sm); }
 
 /* Landing */
-.hero { padding: var(--space-8) 0 var(--space-7); max-width: 42rem; }
-.hero h1 { font-size: clamp(var(--text-2xl), 5vw, var(--text-3xl)); }
-.hero p { font-size: var(--text-lg); color: var(--color-text-muted); }
 
 /* App shell */
 .shell { display: grid; grid-template-columns: 14rem minmax(0, 1fr); gap: var(--space-5); padding: var(--space-5); max-width: 76rem; margin-inline: auto; }

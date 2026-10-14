@@ -1,4 +1,4 @@
-# Property AI — Phases 1–6: foundation, properties and tenancies, rent ledger, operations, AI copilot, WhatsApp assistant
+# Property AI — Phases 1–7: foundation, properties and tenancies, rent ledger, operations, AI copilot, WhatsApp assistant, plans and markets
 
 Multi-tenant workspace: auth, organizations, roles, invitations. Node 20+/TypeScript API (Express 5) on Vercel,
 static HTML/CSS/vanilla-JS frontend, Supabase (Auth + Postgres with RLS).
@@ -93,6 +93,12 @@ database decide what is allowed. Design, security model, limits and configuratio
 Official Meta WhatsApp Cloud API: signed webhook → durable inbox → conversation engine (FAQs, maintenance intake, status, handoffs) with
 verified identity linking, consent/opt-out, template and 24-hour-window rules, delivery tracking, and approval-gated reminders.
 **Not yet verified against Meta**; see **docs/WHATSAPP.md** (design, security model, prerequisites, sandbox test workflow, verification log).
+
+## Phase 7: plans, entitlements and African markets
+
+Database-enforced plan limits (properties, units, seats, storage, AI requests, WhatsApp conversations, exports), subscription lifecycle,
+a billing-provider adapter (Paystack; **integration pending live verification**), and country/currency/time-zone/phone settings for GHS, NGN and KES.
+No legal or tenancy rules are built in. See **docs/BILLING.md** and **docs/MARKETS.md**.
 
 ## Known limitations (Phases 1–4)
 

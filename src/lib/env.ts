@@ -58,6 +58,12 @@ const schema = z.object({
   WHATSAPP_INBOUND_MAX_PER_10MIN: z.coerce.number().int().min(3).max(200).default(20),
   /** How long the webhook may spend processing before it answers Meta (events are already saved; workers finish the rest). */
   WHATSAPP_INLINE_BUDGET_MS: z.coerce.number().int().min(0).max(8000).default(3000),
+  /** 'none' = billing integration pending (entitlements still work, plans are assigned by an operator). 'paystack' = Paystack subscriptions. */
+  BILLING_PROVIDER: z.enum(['none', 'paystack']).default('none'),
+  /** Paystack secret key. Server only. It is also the key that signs Paystack's webhooks. */
+  PAYSTACK_SECRET_KEY: z.string().min(10).optional(),
+  /** Currencies your Paystack account is actually enabled to charge. Confirm with Paystack; do not assume NGN, GHS and KES all work. */
+  BILLING_PAYSTACK_CURRENCIES: z.string().default('NGN').transform((v) => v.split(',').map((x) => x.trim().toUpperCase()).filter(Boolean)),
   /** Refresh-cookie lifetime in days. */
   SESSION_DAYS: z.coerce.number().int().min(1).max(90).default(14),
 });
@@ -80,6 +86,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   }
   if (env.WHATSAPP_PROVIDER === 'cloud' && (!env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_APP_SECRET || !env.WHATSAPP_VERIFY_TOKEN)) {
     throw new Error('Invalid environment configuration:\n  - WHATSAPP_PROVIDER=cloud requires WHATSAPP_ACCESS_TOKEN, WHATSAPP_APP_SECRET and WHATSAPP_VERIFY_TOKEN');
+  }
+  if (env.BILLING_PROVIDER === 'paystack' && !env.PAYSTACK_SECRET_KEY) {
+    throw new Error('Invalid environment configuration:\n  - BILLING_PROVIDER=paystack requires PAYSTACK_SECRET_KEY');
   }
   if (env.NODE_ENV === 'production' && !env.APP_URL.startsWith('https://')) {
     throw new Error('Invalid environment configuration:\n  - APP_URL: must be https in production');

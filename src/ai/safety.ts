@@ -1,3 +1,4 @@
+import { groupedAmount } from '../lib/currency.js';
 import type { Ref } from './types.js';
 
 /**
@@ -33,13 +34,7 @@ export function wrapUntrusted(tool: string, json: string): string {
   return `<untrusted_data source="tool:${tool}">\n${safe}\n</untrusted_data>`;
 }
 
-const fmt = (minor: number, currency: string): string => {
-  const exp = ['JPY', 'KRW', 'VND', 'CLP', 'ISK'].includes(currency) ? 0 : ['BHD', 'KWD', 'OMR', 'JOD', 'TND'].includes(currency) ? 3 : 2;
-  const neg = minor < 0; const abs = Math.abs(minor); const div = 10 ** exp;
-  const whole = Math.trunc(abs / div).toLocaleString('en-US');
-  const frac = exp ? '.' + String(abs % div).padStart(exp, '0') : '';
-  return `${neg ? '-' : ''}${whole}${frac}`;
-};
+const fmt = (minor: number, currency: string): string => groupedAmount(minor, currency);
 export const formatMinor = fmt;
 
 /** Give the model a ready-made display amount next to every `*_minor` figure so it never has to do money arithmetic. */

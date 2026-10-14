@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { groupedAmount } from '../lib/currency.js';
 import type { Env } from '../lib/env.js';
 import { AppError } from '../lib/errors.js';
 import type { Logger } from '../lib/logger.js';
@@ -46,7 +47,7 @@ const STATUS_WORDS: Record<string, string> = { submitted: 'received', triaged: '
 
 interface Ctx { desc?: string; urgent?: boolean; propertyId?: string; propertyName?: string; unitId?: string; unitRef?: string; tenancyId?: string; options?: { tenancy_id: string; unit_id: string; property_id: string; label: string }[]; fails?: number; fromMsg?: string }
 interface Begin {
-  duplicate: boolean; blocked?: boolean; rate_limited?: boolean; rate_notice?: boolean; stale?: boolean; message_id?: string;
+  duplicate: boolean; blocked?: boolean; over_limit?: boolean; rate_limited?: boolean; rate_notice?: boolean; stale?: boolean; message_id?: string;
   contact: { id: string; status: string; consent: string; name: string | null; verified: boolean; needs_reverify: boolean; first_name: string | null };
   conversation: { id: string; state: string; context: Ctx; unknown_streak: number; handoff_status: string };
 }
@@ -68,6 +69,12 @@ export async function handleInbound(d: Deps, ch: Channel, m: Inbound): Promise<v
   const text = rawText ?? '';
   const t = norm(text);
 
+  if (b.over_limit) {
+    // The organization's plan allowance for new conversations this month is used up: do not run the assistant, but never leave the sender or staff in the dark.
+    await handoff('The plan\'s monthly allowance of WhatsApp conversations is used up, so the assistant did not answer. Reply to this person directly.');
+    await say('Thanks for your message. A team member has been told and will reply to you directly.', { dedupe: `ol:${b.conversation.id}:${new Date().toISOString().slice(0, 10)}` });
+    return;
+  }
   if (b.rate_limited) { if (b.rate_notice) await say('You are sending messages very quickly. Please wait a few minutes and try again.', { dedupe: `rl:${b.contact.id}:${Math.floor(Date.now() / 3_600_000)}` }); return; }
 
   // Opt-out is honoured first, always, in any state and even for delayed messages.
@@ -274,7 +281,4 @@ export async function handleInbound(d: Deps, ch: Channel, m: Inbound): Promise<v
   await setState('idle', {}, unknown);
 }
 
-const money = (minor: number, currency: string) => {
-  const zero = ['JPY', 'KRW', 'VND', 'CLP', 'ISK'].includes(currency); const exp = zero ? 0 : 2; const abs = Math.abs(minor); const div = 10 ** exp;
-  return `${minor < 0 ? '-' : ''}${Math.trunc(abs / div).toLocaleString('en-US')}${exp ? '.' + String(abs % div).padStart(exp, '0') : ''} ${currency}`;
-};
+const money = (minor: number, currency: string) => `${groupedAmount(minor, currency)} ${currency}`;

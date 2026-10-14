@@ -34,6 +34,9 @@ export const PERMISSIONS = {
   'copilot:manage': 'admin',       // turn the copilot and external messaging on or off, set the daily AI budget
   'whatsapp:use': 'manager',       // WhatsApp conversations, link codes, handoffs, replies, reminder drafts
   'whatsapp:manage': 'admin',      // connect the number, FAQs, templates
+  'billing:manage': 'admin',       // see the plan and usage, start checkout, reconcile
+  'market:manage': 'admin',        // country, currency, time zone, locale, regional communication settings
+  'exports:use': 'staff',          // CSV exports (also needs the plan to include them)
   'approvals:request': 'staff',
   'approvals:decide': 'manager',
   'delivery:manage': 'manager',    // email queue visibility, retries, run scheduled jobs

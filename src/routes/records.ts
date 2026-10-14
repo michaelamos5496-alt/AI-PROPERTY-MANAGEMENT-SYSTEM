@@ -5,6 +5,7 @@ import { AppError } from '../lib/errors.js';
 import * as S from '../lib/schemas.js';
 import { uuid, validate } from '../lib/validate.js';
 import { requireOrgRole } from '../middleware/auth.js';
+import { normalizePhones } from '../middleware/phone.js';
 import { mountDefs, prefixed, type Def } from './defs.js';
 import type { DataApi, StorageApi } from '../services/supabase.js';
 
@@ -71,6 +72,8 @@ export function recordRoutes(_env: Env, data: DataApi, storage: StorageApi): Rou
   const tok = (req: { auth?: { token: string } }) => req.auth!.token;
   const stripPath = (d: any) => { if (d && typeof d === 'object') delete d.storage_path; return d; };
 
+  r.post('/tenants', ...normalizePhones(data, ['phone', 'emergencyPhone']));
+  r.patch('/tenants/:tenant', ...normalizePhones(data, ['phone', 'emergencyPhone']));
   mountDefs(r, defs, data);
 
   // ---- lease documents: metadata in Postgres, bytes in private Storage -----------------------

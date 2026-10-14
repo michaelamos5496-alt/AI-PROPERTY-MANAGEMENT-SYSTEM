@@ -11,10 +11,12 @@ const patterns = [
   [/SUPABASE_[A-Z_]+/, 'Supabase env var name'],
   [/sk-ant-[A-Za-z0-9_-]{8,}/, 'Anthropic API key'],
   [/ANTHROPIC_[A-Z_]+/, 'Anthropic env var name'],
+  [/PAYSTACK_[A-Z_]+/, 'Paystack env var name'],
+  [/sk_(live|test)_[A-Za-z0-9]{10,}/, 'Paystack secret key'],
   [/WHATSAPP_(APP_SECRET|ACCESS_TOKEN|VERIFY_TOKEN)/, 'WhatsApp secret env var name'],
   [/-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'private key'],
 ];
-const secretValues = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'ANTHROPIC_API_KEY', 'WHATSAPP_APP_SECRET', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN']
+const secretValues = ['SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'ANTHROPIC_API_KEY', 'WHATSAPP_APP_SECRET', 'WHATSAPP_ACCESS_TOKEN', 'WHATSAPP_VERIFY_TOKEN', 'PAYSTACK_SECRET_KEY']
   .map((k) => process.env[k]).filter((v) => v && v.length >= 12);
 
 async function* walk(d) {

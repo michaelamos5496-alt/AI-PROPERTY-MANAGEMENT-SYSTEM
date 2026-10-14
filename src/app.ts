@@ -19,14 +19,17 @@ import { whatsappRoutes } from './routes/whatsapp.js';
 import { whatsappWebhook } from './routes/whatsapp-webhook.js';
 import { createWhatsAppProvider, type WhatsAppProvider } from './whatsapp/provider.js';
 import type { WaRuntime } from './whatsapp/worker.js';
+import { billingRoutes } from './routes/billing.js';
+import { billingWebhook } from './routes/billing-webhook.js';
+import { createBillingProvider, type BillingProvider } from './billing/provider.js';
 import { opsRoutes, portalRoutes, userRoutes } from './routes/ops.js';
 import { createEmailProvider, type EmailProvider } from './services/email.js';
 import { recordRoutes } from './routes/records.js';
 import { AuthApi, DataApi, ServiceApi, StorageApi } from './services/supabase.js';
 
-export interface AppDeps { env: Env; fetch?: typeof fetch; logger?: Logger; emailProvider?: EmailProvider; llm?: LlmProvider; whatsapp?: WhatsAppProvider }
+export interface AppDeps { env: Env; fetch?: typeof fetch; logger?: Logger; emailProvider?: EmailProvider; llm?: LlmProvider; whatsapp?: WhatsAppProvider; billing?: BillingProvider | null }
 
-export function createApp({ env, fetch: f = fetch, logger, emailProvider, llm, whatsapp }: AppDeps): Express {
+export function createApp({ env, fetch: f = fetch, logger, emailProvider, llm, whatsapp, billing }: AppDeps): Express {
   const log = logger ?? createLogger(env.LOG_LEVEL);
   const auth = new AuthApi(env, f);
   const data = new DataApi(env, f);
@@ -41,6 +44,7 @@ export function createApp({ env, fetch: f = fetch, logger, emailProvider, llm, w
   };
 
   const wa: WaRuntime = { env, service, provider: whatsapp ?? createWhatsAppProvider(env, log, f), log };
+  const bill = billing !== undefined ? billing : createBillingProvider(env, f);
   const app = express();
   app.disable('x-powered-by');
   app.set('trust proxy', 1); // Vercel terminates TLS and sets X-Forwarded-For
@@ -49,13 +53,14 @@ export function createApp({ env, fetch: f = fetch, logger, emailProvider, llm, w
   app.use(helmet({ contentSecurityPolicy: false, hsts: env.NODE_ENV === 'production' }));
   // Meta's webhook needs the raw body for signature checking, so it is mounted before the JSON parser, CSRF guard and global limiter.
   app.use('/api/webhooks/whatsapp', whatsappWebhook(env, service, wa, log));
+  app.use('/api/webhooks/billing', billingWebhook(bill, service, log));
   app.use(rateLimit({ name: 'global', windowSeconds: env.RATE_LIMIT_WINDOW_SECONDS, max: env.RATE_LIMIT_MAX }));
   app.use(express.json({ limit: '32kb' }));
   app.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
   app.use(csrfGuard(env));
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
-  app.use('/api/internal', internalRoutes(env, service, provider, log, wa));
+  app.use('/api/internal', internalRoutes(env, service, provider, log, wa, bill));
   app.use('/api/auth', authRoutes(env, auth));
   // One authenticated router so the session is verified exactly once per request.
   const api = express.Router();
@@ -66,6 +71,7 @@ export function createApp({ env, fetch: f = fetch, logger, emailProvider, llm, w
   api.use('/organizations/:orgId', recordRoutes(env, data, storage));
   api.use('/organizations/:orgId', financeRoutes(env, data));
   api.use('/organizations/:orgId', opsRoutes(env, data, storage, { afterWrite }));
+  api.use('/organizations/:orgId', billingRoutes(env, data, service, bill));
   api.use('/organizations/:orgId', whatsappRoutes(env, data, service, wa.provider.name, { afterWrite }));
   api.use('/organizations/:orgId', copilotRoutes(env, data, service, llm ?? createProvider(env), { afterWrite, log }));
   app.use('/api', api);

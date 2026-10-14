@@ -1,6 +1,8 @@
 import { del, get, patch, post, requireSession, signOut } from './api.js';
 import { clear, confirmDialog, copyText, emptyState, h, handleForm, openDialog, skeleton, toast } from './ui.js';
 import { approvalsView, notificationsView, operationsView } from './views/approvals.js';
+import { billingView } from './views/billing.js';
+import { setMarket } from './kit.js';
 import { whatsappView } from './views/whatsapp.js';
 import { copilotView } from './views/copilot.js';
 import { financeView, paymentView, receiptView } from './views/finance.js';
@@ -35,7 +37,7 @@ const base = () => `/organizations/${orgId}`;
 const fmtDate = (s) => new Date(s).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
 // Shared with the record views.
-const ctx = { me, get orgId() { return orgId; }, get base() { return base(); }, get role() { return ws.role; }, can: (p) => can(p) };
+const ctx = { market: null, me, get orgId() { return orgId; }, get base() { return base(); }, get role() { return ws.role; }, can: (p) => can(p) };
 let pendingApprovals = 0;
 
 const routes = {
@@ -55,6 +57,7 @@ const routes = {
   vendors: { label: 'Vendors', view: () => vendorsView(ctx), needs: 'maintenance:read' },
   operations: { label: 'Operations', view: (id) => operationsView(ctx, id), needs: 'delivery:manage' },
   notifications: { view: () => notificationsView(), highlight: 'overview' },
+  billing: { label: 'Plan', view: (id) => billingView(ctx, id), needs: 'billing:manage' },
   members: { label: 'Members', view: () => members() },
   invitations: { label: 'Invitations', view: () => invitations(), needs: 'invitations:manage' },
   settings: { label: 'Settings', view: () => settings() },
@@ -70,9 +73,29 @@ async function load() {
   try { ws = await get(`${base()}/workspace`); }
   catch (e) { return fail(e); }
   pendingApprovals = 0;
+  ctx.market = await get(`${base()}/market`).catch(() => null);
+  setMarket(ctx.market);
+  showPlanBanner();
   if (can('approvals:decide')) pendingApprovals = await get(`${base()}/approvals?scope=inbox&limit=1`).then((r) => r.pending_for_me).catch(() => 0);
   render();
   refreshBell();
+}
+
+/* Plan banner: trial countdown, lapsed or overdue plans. Information only: limits are enforced by the server. */
+async function showPlanBanner() {
+  const el = document.getElementById('plan-banner');
+  if (!el) return;
+  el.hidden = true;
+  if (!can('approvals:request')) return;
+  try {
+    const e = await get(`${base()}/entitlements`);
+    const link = can('billing:manage') ? h('a', { href: '#/billing' }, ' See plans') : null;
+    let msg = null; let cls = '';
+    if (e.past_due) { msg = 'Your last payment failed. Update it to keep your plan.'; cls = 'plan-banner--warn'; }
+    else if (e.lapsed) { msg = `Your plan is not active, so ${e.plan.name} limits apply. Your data is safe.`; cls = 'plan-banner--warn'; }
+    else if (e.status === 'trialing' && e.trial_ends_at) { const d = Math.max(0, Math.ceil((new Date(e.trial_ends_at) - Date.now()) / 86400000)); msg = `Free trial: ${d} day${d === 1 ? '' : 's'} left.`; }
+    if (msg) { clear(el).append(h('div', { class: `plan-banner ${cls}` }, msg, link)); el.hidden = false; }
+  } catch { /* the banner is a convenience */ }
 }
 
 /* Notification bell: unread count, refreshed periodically and after navigation. */

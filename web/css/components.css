@@ -162,3 +162,14 @@
 .wa-reply .textarea { flex: 1; }
 .code-big { font-size: 1.8rem; letter-spacing: 0.25em; font-family: ui-monospace, monospace; }
 .checklist { list-style: none; padding: 0; margin: 0 0 1rem; display: flex; flex-direction: column; gap: 0.3rem; }
+
+/* --------------------------------------------------------------- plans */
+.plan-banner { padding: 0.5rem 0.9rem; border: 1px solid var(--color-border); border-radius: 0.5rem; background: var(--color-surface-2); margin-bottom: 0.75rem; }
+.plan-banner--warn { border-color: #b7791f; }
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; margin-top: 0.75rem; }
+.plan-card { display: flex; flex-direction: column; gap: 0.5rem; }
+.plan-card--current { outline: 2px solid var(--color-accent); }
+.plan-price { font-size: 1.4rem; font-weight: 600; }
+.plan-list { padding-left: 1.1rem; margin: 0; flex: 1; }
+.meter { display: block; width: 100%; max-width: 18rem; height: 0.6rem; margin-top: 0.25rem; }
+.inline-field { margin-right: 1rem; }

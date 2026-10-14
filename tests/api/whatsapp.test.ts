@@ -122,7 +122,7 @@ describe('durable, idempotent intake', () => {
 
 describe('identity and privacy', () => {
   it('shares nothing private with an unverified number, even one that matches the tenant\'s phone on file', async () => {
-    const w = await setup(); const from = '15551120001';
+    const w = await setup(); const from = '14155552671';
     await ok(w.staff.patch(`${w.base}/tenants/${w.tina.tenant.id}`).send({ expectedVersion: w.tina.tenant.version, fullName: 'Tina Tenant', phone: `+${from}` }));
     const r = await reply(w, from, 'what is my balance?');
     expect(r).toMatch(/link/i);

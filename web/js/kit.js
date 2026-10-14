@@ -18,13 +18,16 @@ export const options = (map) => Object.entries(map);
 
 /* --------------------------------------------------------------- formatting */
 export { decimalPlaces as decimals } from './money.js';
-export const fmtMoney = (minor, currency) => formatMoney(minor, currency);
+/** The organization's regional settings (locale, time zone, country, currency). Set once when the workspace loads. */
+const mkt = { locale: undefined, timezone: undefined, country: null, currency: null };
+export const setMarket = (m) => Object.assign(mkt, { locale: m?.locale || undefined, timezone: m?.timezone || undefined, country: m?.country ?? null, currency: m?.currency ?? null });
+export const fmtMoney = (minor, currency) => formatMoney(minor, currency, mkt.locale);
 /** Exact string-based conversion; returns NaN when the text is not a valid amount for the currency (never rounds). */
 export const toMinor = (text, currency, opts) => { const r = parseMoney(text, currency, opts); return r.ok ? r.minor : NaN; };
 export const fromMinor = (minor, currency) => (minor == null ? '' : toDecimalString(minor, currency));
 // Date-only values ("2026-01-31") are calendar dates, not instants: format them in UTC so they never shift a day.
-export const fmtDate = (d) => (d ? new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—');
-export const fmtTimestamp = (t) => (t ? new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—');
+export const fmtDate = (d) => (d ? new Date(`${d}T00:00:00Z`).toLocaleDateString(mkt.locale, { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—');
+export const fmtTimestamp = (t) => (t ? new Date(t).toLocaleString(mkt.locale, { dateStyle: 'medium', timeStyle: 'short', timeZone: mkt.timezone }) : '—');
 export const fmtBytes = (n) => (n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`);
 export const address = (p) => [p.address_line1, p.address_line2, p.city, p.region, p.postal_code, p.country].filter(Boolean).join(', ');
 
@@ -50,6 +53,7 @@ export const currencies = () => {
   return Intl.supportedValuesOf('currency').map((c) => [c, `${c} — ${names.of(c)}`]);
 };
 export const localDefaults = () => {
+  if (mkt.country) return { country: mkt.country, timezone: mkt.timezone || 'UTC', currency: mkt.currency || 'USD' };
   const region = (navigator.language.split('-')[1] ?? 'US').toUpperCase();
   return { country: region, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', currency: region === 'GB' ? 'GBP' : 'USD' };
 };

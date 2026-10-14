@@ -18,6 +18,7 @@
     "test:api": "vitest run tests/api",
     "test:security": "vitest run tests/security",
     "load": "tsx tests/load/run.ts standard --report docs/LOAD_TEST_RESULTS.md",
+    "demo": "npm run build:web && tsx scripts/demo.ts",
     "load:smoke": "tsx tests/load/run.ts smoke",
     "test:e2e": "playwright test",
     "check": "npm run lint && npm run typecheck && npm test && npm run build"

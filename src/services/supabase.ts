@@ -97,7 +97,8 @@ export class DataApi {
   }
 }
 
-const BUCKET = 'lease-documents';
+export const LEASE_BUCKET = 'lease-documents';
+export const MAINTENANCE_BUCKET = 'maintenance-attachments';
 const encodePath = (p: string) => p.split('/').map(encodeURIComponent).join('/');
 
 /** Supabase Storage client. Always acts as the signed-in user so storage RLS applies. */
@@ -109,16 +110,16 @@ export class StorageApi {
   });
 
   /** One-time upload capability for exactly one registered path. */
-  async signUpload(token: string, path: string): Promise<string> {
-    const body: any = await call(this.f, `${this.base()}/object/upload/sign/${BUCKET}/${encodePath(path)}`, {
+  async signUpload(token: string, path: string, bucket = LEASE_BUCKET): Promise<string> {
+    const body: any = await call(this.f, `${this.base()}/object/upload/sign/${bucket}/${encodePath(path)}`, {
       method: 'POST', headers: this.headers(token), body: '{}',
     });
     return `${this.base()}${body.url}`;
   }
 
   /** Short-lived download URL. Callers must have authorized the document first. */
-  async signDownload(token: string, path: string, fileName: string, seconds = 60): Promise<string> {
-    const body: any = await call(this.f, `${this.base()}/object/sign/${BUCKET}/${encodePath(path)}`, {
+  async signDownload(token: string, path: string, fileName: string, seconds = 60, bucket = LEASE_BUCKET): Promise<string> {
+    const body: any = await call(this.f, `${this.base()}/object/sign/${bucket}/${encodePath(path)}`, {
       method: 'POST', headers: this.headers(token), body: JSON.stringify({ expiresIn: seconds }),
     });
     const url = `${this.base()}${body.signedURL}`;
@@ -126,9 +127,9 @@ export class StorageApi {
   }
 
   /** Server-verified size/type of an uploaded object, or null if it isn't there. */
-  async info(token: string, path: string): Promise<{ size: number; contentType: string } | null> {
+  async info(token: string, path: string, bucket = LEASE_BUCKET): Promise<{ size: number; contentType: string } | null> {
     try {
-      const b: any = await call(this.f, `${this.base()}/object/info/${BUCKET}/${encodePath(path)}`, { headers: this.headers(token) });
+      const b: any = await call(this.f, `${this.base()}/object/info/${bucket}/${encodePath(path)}`, { headers: this.headers(token) });
       const size = Number(b?.size ?? b?.metadata?.size);
       const contentType = String(b?.contentType ?? b?.content_type ?? b?.metadata?.mimetype ?? '');
       return Number.isFinite(size) ? { size, contentType } : null;
@@ -136,5 +137,21 @@ export class StorageApi {
       if (e instanceof AppError && (e.status === 404 || e.status === 400 || e.status === 403)) return null;
       throw e;
     }
+  }
+}
+
+/**
+ * Service-role client for the background worker only (scheduled jobs and email delivery). It bypasses row-level security, so it
+ * may only call the narrow SECURITY DEFINER functions that were granted to `service_role`. It is never used on behalf of a user.
+ */
+export class ServiceApi {
+  constructor(private env: Env, private f: Fetch = fetch) {}
+  get configured() { return !!this.env.SUPABASE_SERVICE_ROLE_KEY; }
+  rpc<T = unknown>(fn: string, args: Record<string, unknown> = {}): Promise<T> {
+    const key = this.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) throw new AppError(503, 'upstream_error', 'Background jobs are not configured (SUPABASE_SERVICE_ROLE_KEY).');
+    return call(this.f, `${this.env.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST', headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' }, body: JSON.stringify(args),
+    }) as Promise<T>;
   }
 }

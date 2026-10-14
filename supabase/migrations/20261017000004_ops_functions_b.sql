@@ -566,7 +566,7 @@ declare r public.maintenance_requests;
 begin
   if app.request_actor(p_org, p_request) is distinct from 'tenant' then raise exception 'request not found' using errcode = 'PT404'; end if;
   r := app.load_request(p_org, p_request);
-  return jsonb_build_object('id', r.id, 'org_id', r.org_id, 'title', r.title, 'description', r.description, 'status', r.status, 'category', r.category, 'created_at', r.created_at,
+  return jsonb_build_object('id', r.id, 'org_id', r.org_id, 'version', r.version, 'title', r.title, 'description', r.description, 'status', r.status, 'category', r.category, 'created_at', r.created_at,
     'resolution_notes', r.resolution_notes, 'cancel_reason', r.cancel_reason,
     'urgency_label', (select label from public.urgency_levels where id = r.urgency_id),
     'property_name', (select name from public.properties where id = r.property_id), 'unit_reference', (select reference from public.units where id = r.unit_id),

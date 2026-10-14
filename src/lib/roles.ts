@@ -26,6 +26,14 @@ export const PERMISSIONS = {
   'finance:manage': 'manager',     // schedules, charges, reversals, voids, expenses
   'finance:adjust': 'admin',       // charge adjustments (waivers / uplifts)
   'finance:audit': 'manager',      // audit history and reconciliation
+  'maintenance:read': 'staff',
+  'maintenance:write': 'staff',    // submit, triage, note, assign (staff: to themselves), estimate, progress
+  'maintenance:manage': 'manager', // assign to anyone, cancel arranged work, reopen, acknowledge escalations, vendors, urgency levels
+  'maintenance:settings': 'admin', // escalation contact, keywords, approval thresholds
+  'approvals:request': 'staff',
+  'approvals:decide': 'manager',
+  'delivery:manage': 'manager',    // email queue visibility, retries, run scheduled jobs
+  'portal:manage': 'manager',      // invite / revoke tenant portal access
 } as const satisfies Record<string, Role>;
 export type Permission = keyof typeof PERMISSIONS;
 

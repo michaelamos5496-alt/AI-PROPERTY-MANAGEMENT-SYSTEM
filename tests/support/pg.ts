@@ -55,12 +55,28 @@ export async function startPostgres() {
     const sql = `select public.${fn}(${keys.map((k, i) => `${k} => $${i + 1}`).join(', ')}) as r`;
     return (await q(sql, keys.map((k) => (args[k] !== null && typeof args[k] === 'object' ? JSON.stringify(args[k]) : args[k])))).rows[0].r;
   });
+  /** Run as the service role (what the cron worker uses): no user identity. */
+  const svc = async <T>(fn: (q: Q) => Promise<T>): Promise<T> => {
+    const c = await pool.connect();
+    try {
+      await c.query('begin');
+      await c.query(`select set_config('request.jwt.claims', '{"role":"service_role"}', true)`);
+      await c.query('set local role service_role');
+      const out = await fn((sql, params) => c.query(sql, params as any[]));
+      await c.query('commit');
+      return out;
+    } catch (e) { await c.query('rollback').catch(() => {}); throw e; } finally { c.release(); }
+  };
+  const svcCall = (fn: string, args: Record<string, unknown> = {}) => svc(async (q) => {
+    const keys = Object.keys(args);
+    return (await q(`select public.${fn}(${keys.map((k, i) => `${k} => $${i + 1}`).join(', ')}) as r`, keys.map((k) => args[k]))).rows[0].r;
+  });
   const createUser = async (email: string) => {
     const r = await admin.query(`insert into auth.users (email, email_confirmed_at) values ($1, now()) returning id`, [email]);
     return { sub: r.rows[0].id as string, email };
   };
   return {
-    pool, admin, as, call, createUser, port,
+    pool, admin, as, call, svc, svcCall, createUser, port,
     version: async () => (await admin.query('show server_version')).rows[0].server_version as string,
     stop: async () => { await pool.end().catch(() => {}); await admin.end().catch(() => {}); await server.stop().catch(() => {}); rmSync(dir, { recursive: true, force: true }); },
   };

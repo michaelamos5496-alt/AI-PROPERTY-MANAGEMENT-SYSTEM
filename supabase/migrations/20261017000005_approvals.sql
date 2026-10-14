@@ -122,6 +122,9 @@ begin
   if v_fp is null then raise exception 'target not found' using errcode = 'PT404'; end if;
   perform app.validate_approval_payload(p_org, p_action, p_target, p_payload);
   v_hash := app.sha256_hex(p_payload::text);
+  -- Serialise proposals per target, then look for a live one BEFORE inserting. (The unique index would also stop duplicates,
+  -- but it would turn a harmless repeat request into an error for the losers of a race.)
+  perform pg_advisory_xact_lock(hashtextextended('approval:' || p_org || ':' || p_action || ':' || p_target, 0));
   select * into v_existing from public.approvals where org_id = p_org and action_type = p_action and target_id = p_target and status in ('pending', 'approved', 'executing') for update;
   if v_existing.id is not null then
     if v_existing.payload_hash = v_hash and v_existing.target_fingerprint = v_fp then return v_existing.id; end if;     -- same proposal: idempotent

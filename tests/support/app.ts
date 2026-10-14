@@ -2,16 +2,39 @@ import supertest from 'supertest';
 import { createApp } from '../../src/app.js';
 import { loadEnv } from '../../src/lib/env.js';
 import { createLogger } from '../../src/lib/logger.js';
+import { SendError, type EmailMessage, type EmailProvider } from '../../src/services/email.js';
 import { startMockSupabase, type MockSupabase } from './mock-supabase.js';
+
+/** Records every email and can be told to fail, so retry and dead-letter behaviour can be proven end to end. */
+export class FakeEmailProvider implements EmailProvider {
+  readonly name = 'fake';
+  sent: EmailMessage[] = [];
+  attempts: EmailMessage[] = [];
+  private script: ('ok' | 'transient' | 'permanent')[] = [];
+  /** Queue outcomes for the next sends, in order; once exhausted every send succeeds. */
+  failNext(...outcomes: ('ok' | 'transient' | 'permanent')[]) { this.script.push(...outcomes); }
+  async send(m: EmailMessage) {
+    this.attempts.push(m);
+    const next = this.script.shift() ?? 'ok';
+    if (next === 'transient') throw new SendError('provider 503: try later', false);
+    if (next === 'permanent') throw new SendError('provider 422: invalid recipient', true);
+    this.sent.push(m);
+    return { id: `fake-${this.sent.length}` };
+  }
+}
+
+export const CRON_SECRET = 'test-cron-secret-0123456789-0123456789';
 
 export async function startTestApp(over: Record<string, string> = {}, mockOpts: { confirmEmails?: boolean } = {}) {
   const mock = await startMockSupabase(mockOpts);
   const env = loadEnv({
     NODE_ENV: 'test', SUPABASE_URL: mock.url, SUPABASE_ANON_KEY: mock.anonKey,
     APP_URL: 'http://localhost:3000', LOG_LEVEL: 'silent',
-    RATE_LIMIT_MAX: '1000', RATE_LIMIT_AUTH_MAX: '1000', ...over,
+    RATE_LIMIT_MAX: '1000', RATE_LIMIT_AUTH_MAX: '1000',
+    SUPABASE_SERVICE_ROLE_KEY: mock.serviceKey, CRON_SECRET, EMAIL_INLINE_DELIVERY: 'false', RATE_LIMIT_INTERNAL_MAX: '1000', ...over,
   });
-  const app = createApp({ env, logger: createLogger('silent') });
+  const email = new FakeEmailProvider();
+  const app = createApp({ env, logger: createLogger('silent'), emailProvider: email });
   /** A fresh browser-like client with its own cookie jar. */
   const client = () => supertest.agent(app);
   let n = 0;
@@ -37,7 +60,7 @@ export async function startTestApp(over: Record<string, string> = {}, mockOpts: 
     if (r.status !== 200) throw new Error(`accept failed ${r.status} ${JSON.stringify(r.body)}`);
     return u.c;
   }
-  return { app, env, mock, client, signUp, newOrg, addMember, close: () => mock.close() };
+  return { app, env, mock, email, client, signUp, newOrg, addMember, close: () => mock.close() };
 }
 export type TestApp = Awaited<ReturnType<typeof startTestApp>>;
 export type { MockSupabase };

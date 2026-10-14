@@ -1,4 +1,4 @@
-# Property AI — Phases 1–3: foundation, properties and tenancies, rent ledger
+# Property AI — Phases 1–4: foundation, properties and tenancies, rent ledger, operations
 
 Multi-tenant workspace: auth, organizations, roles, invitations. Node 20+/TypeScript API (Express 5) on Vercel,
 static HTML/CSS/vanilla-JS frontend, Supabase (Auth + Postgres with RLS).
@@ -76,7 +76,13 @@ limits: **docs/FINANCE.md**. Payments are manual and clearly not bank-verified.
 `npm run test:db` includes `tests/db/concurrency.test.ts`, which starts a real PostgreSQL server (embedded binary,
 downloaded by `npm install`) to prove behaviour under parallel connections.
 
-## Known limitations (Phases 1–3)
+## Phase 4: maintenance, notifications, approvals
+
+Maintenance requests and work orders with an enforced lifecycle, critical-issue escalation to a human, a verified tenant portal, a durable email queue with retries,
+idempotent reminder jobs, and a reusable approval engine with an inbox. Design, rules and limits: **docs/OPERATIONS.md**.
+Scheduled jobs need `SUPABASE_SERVICE_ROLE_KEY` + `CRON_SECRET` (server-side only), see `.env.example`.
+
+## Known limitations (Phases 1–4)
 
 * Rate limiting is in-memory per function instance (best-effort). Move to a shared store before relying on it.
 * Invitation emails are not sent; admins copy the single-use link. Supabase handles confirmation/recovery emails.

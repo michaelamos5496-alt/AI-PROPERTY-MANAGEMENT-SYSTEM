@@ -1,7 +1,9 @@
 import { del, get, patch, post, requireSession, signOut } from './api.js';
 import { clear, confirmDialog, copyText, emptyState, h, handleForm, openDialog, skeleton, toast } from './ui.js';
+import { approvalsView, notificationsView, operationsView } from './views/approvals.js';
 import { financeView, paymentView, receiptView } from './views/finance.js';
 import { leaseView } from './views/leases.js';
+import { maintenanceDetailView, maintenanceListView, vendorsView } from './views/maintenance.js';
 import { propertiesView, propertyView } from './views/properties.js';
 import { tenanciesView, tenancyView } from './views/tenancies.js';
 import { tenantView, tenantsView } from './views/tenants.js';
@@ -31,7 +33,8 @@ const base = () => `/organizations/${orgId}`;
 const fmtDate = (s) => new Date(s).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
 // Shared with the record views.
-const ctx = { me, get orgId() { return orgId; }, get base() { return base(); }, can: (p) => can(p) };
+const ctx = { me, get orgId() { return orgId; }, get base() { return base(); }, get role() { return ws.role; }, can: (p) => can(p) };
+let pendingApprovals = 0;
 
 const routes = {
   overview: { label: 'Overview', view: () => overview() },
@@ -43,6 +46,11 @@ const routes = {
   finance: { label: 'Finance', view: (id) => financeView(ctx, id), needs: 'finance:read' },
   payments: { view: (id) => (id ? paymentView(ctx, id) : financeView(ctx, 'payments')), highlight: 'finance', needs: 'finance:read' },
   receipts: { view: (id) => receiptView(ctx, id), highlight: 'finance', needs: 'finance:read' },
+  maintenance: { label: 'Maintenance', view: (id) => (id ? maintenanceDetailView(ctx, id) : maintenanceListView(ctx)), needs: 'maintenance:read' },
+  approvals: { label: () => (pendingApprovals ? `Approvals (${pendingApprovals})` : 'Approvals'), view: (id) => approvalsView(ctx, id), needs: 'approvals:request' },
+  vendors: { label: 'Vendors', view: () => vendorsView(ctx), needs: 'maintenance:read' },
+  operations: { label: 'Operations', view: (id) => operationsView(ctx, id), needs: 'delivery:manage' },
+  notifications: { view: () => notificationsView(), highlight: 'overview' },
   members: { label: 'Members', view: () => members() },
   invitations: { label: 'Invitations', view: () => invitations(), needs: 'invitations:manage' },
   settings: { label: 'Settings', view: () => settings() },
@@ -57,8 +65,25 @@ async function load() {
   clear(main).append(skeleton(4));
   try { ws = await get(`${base()}/workspace`); }
   catch (e) { return fail(e); }
+  pendingApprovals = 0;
+  if (can('approvals:decide')) pendingApprovals = await get(`${base()}/approvals?scope=inbox&limit=1`).then((r) => r.pending_for_me).catch(() => 0);
   render();
+  refreshBell();
 }
+
+/* Notification bell: unread count, refreshed periodically and after navigation. */
+const bell = document.getElementById('bell-count');
+async function refreshBell() {
+  try {
+    const d = await get('/me/notifications?unreadOnly=true&limit=1');
+    bell.textContent = d.unread > 99 ? '99+' : String(d.unread);
+    bell.hidden = d.unread === 0;
+    document.getElementById('bell').setAttribute('aria-label', d.unread ? `Notifications, ${d.unread} unread` : 'Notifications');
+    if (can('approvals:decide')) { const n = await get(`${base()}/approvals?scope=inbox&limit=1`).then((r) => r.pending_for_me); if (n !== pendingApprovals) { pendingApprovals = n; render(); } }
+  } catch { /* the bell is a convenience; failures stay quiet */ }
+}
+setInterval(() => { if (!document.hidden) refreshBell(); }, 60_000);
+window.addEventListener('hashchange', () => setTimeout(refreshBell, 300));
 
 function fail(e) {
   clear(main).append(emptyState({
@@ -75,7 +100,7 @@ async function render() {
   const active = routes[key].highlight ?? key;
   clear(nav).append(...Object.entries(routes)
     .filter(([, r]) => r.label && (!r.needs || can(r.needs)))
-    .map(([k, r]) => h('a', { href: `#/${k}`, 'aria-current': k === active ? 'page' : false }, r.label)));
+    .map(([k, r]) => h('a', { href: `#/${k}`, 'aria-current': k === active ? 'page' : false }, typeof r.label === 'function' ? r.label() : r.label)));
   clear(main).append(skeleton(4));
   try {
     const node = await routes[key].view(id);

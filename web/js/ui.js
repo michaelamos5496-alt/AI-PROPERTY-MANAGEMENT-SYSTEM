@@ -15,7 +15,15 @@ export function h(tag, props = {}, ...children) {
   }
   return el;
 }
-export const clear = (el) => { el.replaceChildren(); return el; };
+/**
+ * Empty an element for re-rendering. The returned element's append() ignores null/undefined/false, so views can pass optional
+ * pieces (`cond ? node : null`) without the browser printing the word "null".
+ */
+export const clear = (el) => {
+  el.replaceChildren();
+  el.append = (...kids) => Element.prototype.append.apply(el, kids.flat(Infinity).filter((k) => k != null && k !== false));
+  return el;
+};
 
 /* ---------------------------------------------------------------- toasts */
 let toastRoot;

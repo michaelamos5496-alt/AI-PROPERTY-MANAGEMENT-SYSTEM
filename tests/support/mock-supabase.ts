@@ -5,6 +5,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import { as, createTestDb } from './db.js';
 
 export const MOCK_ANON_KEY = 'mock-anon-key-0123456789abcdef';
+export const MOCK_SERVICE_KEY = 'mock-service-key-0123456789abcdef';
 
 interface Options { port?: number; confirmEmails?: boolean }
 
@@ -119,7 +120,7 @@ export async function startMockSupabase(opts: Options = {}) {
       res.end(JSON.stringify(body));
     };
     try {
-      if (req.headers.apikey !== MOCK_ANON_KEY) return send_(401, { message: 'No API key found' });
+      if (req.headers.apikey !== MOCK_ANON_KEY && req.headers.apikey !== MOCK_SERVICE_KEY) return send_(401, { message: 'No API key found' });
       const p = url.pathname;
       const body = req.method === 'GET' ? {} : await readBody(req);
 
@@ -176,8 +177,9 @@ export async function startMockSupabase(opts: Options = {}) {
       }
       if (p.startsWith('/rest/v1/rpc/')) {
         const fn = p.slice('/rest/v1/rpc/'.length);
+        const isService = bearer(req) === MOCK_SERVICE_KEY && req.headers.apikey === MOCK_SERVICE_KEY;
         const s = access.get(bearer(req));
-        const actor = s ? { sub: s.id, email: s.email } : null;
+        const actor: any = isService ? { service: true } : s ? { sub: s.id, email: s.email } : null;
         const keys = Object.keys(body);
         const sql = `select public.${fn.replace(/[^a-z0-9_]/g, '')}(${keys.map((k, i) => `${k.replace(/[^a-z0-9_]/g, '')} => $${i + 1}`).join(', ')}) as r`;
         const params = keys.map((k) => (body[k] !== null && typeof body[k] === 'object' ? JSON.stringify(body[k]) : body[k]));
@@ -202,6 +204,7 @@ export async function startMockSupabase(opts: Options = {}) {
   return {
     url: `http://127.0.0.1:${port}`,
     anonKey: MOCK_ANON_KEY,
+    serviceKey: MOCK_SERVICE_KEY,
     db,
     sent,
     /** Last emailed token hash for an address/type (simulates opening the email link). */

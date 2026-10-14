@@ -9,17 +9,29 @@ import { errorHandler, notFoundHandler } from './middleware/errors.js';
 import { requestContext } from './middleware/request-context.js';
 import { authRoutes } from './routes/auth.js';
 import { orgRoutes } from './routes/orgs.js';
+import { deliverEmails } from './jobs/runner.js';
 import { financeRoutes } from './routes/finance.js';
+import { internalRoutes } from './routes/internal.js';
+import { opsRoutes, portalRoutes, userRoutes } from './routes/ops.js';
+import { createEmailProvider, type EmailProvider } from './services/email.js';
 import { recordRoutes } from './routes/records.js';
-import { AuthApi, DataApi, StorageApi } from './services/supabase.js';
+import { AuthApi, DataApi, ServiceApi, StorageApi } from './services/supabase.js';
 
-export interface AppDeps { env: Env; fetch?: typeof fetch; logger?: Logger }
+export interface AppDeps { env: Env; fetch?: typeof fetch; logger?: Logger; emailProvider?: EmailProvider }
 
-export function createApp({ env, fetch: f = fetch, logger }: AppDeps): Express {
+export function createApp({ env, fetch: f = fetch, logger, emailProvider }: AppDeps): Express {
   const log = logger ?? createLogger(env.LOG_LEVEL);
   const auth = new AuthApi(env, f);
   const data = new DataApi(env, f);
   const storage = new StorageApi(env, f);
+  const service = new ServiceApi(env, f);
+  const provider = emailProvider ?? createEmailProvider(env, log, f);
+  // Urgent notices (e.g. a critical escalation) should not wait for the next scheduled run, so after a write we flush the email
+  // queue for a moment. Best-effort and time-boxed: the durable queue + scheduler remain the source of truth for retries.
+  const afterWrite = async () => {
+    if (!service.configured || !env.EMAIL_INLINE_DELIVERY) return;
+    await Promise.race([deliverEmails(service, provider, log, { appUrl: env.APP_URL, batchSize: env.EMAIL_BATCH_SIZE, maxBatches: 1, deadlineMs: 2500 }), new Promise((r) => setTimeout(r, 2500))]);
+  };
 
   const app = express();
   app.disable('x-powered-by');
@@ -33,13 +45,17 @@ export function createApp({ env, fetch: f = fetch, logger }: AppDeps): Express {
   app.use(csrfGuard(env));
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
+  app.use('/api/internal', internalRoutes(env, service, provider, log));
   app.use('/api/auth', authRoutes(env, auth));
   // One authenticated router so the session is verified exactly once per request.
   const api = express.Router();
   api.use(requireAuth(env, auth));
   api.use(orgRoutes(env, data));
+  api.use('/me', userRoutes(data, { afterWrite }));
+  api.use('/portal', portalRoutes(data, storage, { afterWrite }));
   api.use('/organizations/:orgId', recordRoutes(env, data, storage));
   api.use('/organizations/:orgId', financeRoutes(env, data));
+  api.use('/organizations/:orgId', opsRoutes(env, data, storage, { afterWrite }));
   app.use('/api', api);
 
   app.use(notFoundHandler);

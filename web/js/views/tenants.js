@@ -1,5 +1,5 @@
 import { get, patch, post } from '../api.js';
-import { clear, confirmDialog, emptyState, h, skeleton, toast } from '../ui.js';
+import { clear, confirmDialog, copyText, emptyState, h, openDialog, skeleton, toast } from '../ui.js';
 import { LABELS, archivedBadge, crumbs, dataTable, dl, errorState, fmtDate, fmtMoney, fmtTimestamp, formDialog, pageHeader, section, statusBadge } from '../kit.js';
 import { openTenancyForm } from './tenancies.js';
 
@@ -42,6 +42,35 @@ export function tenantsView(ctx) {
     }));
 }
 
+function portalSection(ctx, t, rerender) {
+  const body = h('div', {}, skeleton(1));
+  (async () => {
+    const reminders = h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !t.reminders_opt_out, disabled: !ctx.can('tenants:write'), onchange: async (e) => {
+      try { await post(`${ctx.base}/tenants/${t.id}/reminders`, { optOut: !e.target.checked }); toast(e.target.checked ? 'Rent reminders are on.' : 'Rent reminders are off for this tenant.', 'success'); } catch (err) { toast(err.message, 'error'); e.target.checked = !e.target.checked; } } }), ' Send automatic rent reminders by email');
+    if (!ctx.can('portal:manage')) return clear(body).append(reminders);
+    let a;
+    try { a = await get(`${ctx.base}/tenants/${t.id}/portal-access`); } catch (e) { return clear(body).append(reminders, errorState(e)); }
+    const invite = async () => {
+      try {
+        const r = await post(`${ctx.base}/tenants/${t.id}/portal-invitations`, {});
+        const input = h('input', { class: 'input', readonly: true, value: r.inviteUrl, 'aria-label': 'Invitation link', onfocus: (e) => e.target.select() });
+        openDialog({ title: 'Portal invitation ready', body: h('div', {}, h('p', {}, `Send this single-use link to ${t.email}. It works only for that email address, once, for 7 days. The tenant must sign in or register with that same address.`),
+          h('div', { class: 'copy-box' }, input, h('button', { class: 'btn btn--secondary', type: 'button', onclick: () => copyText(r.inviteUrl) }, 'Copy'))) });
+        rerender();
+      } catch (e) { toast(e.message, 'error'); }
+    };
+    clear(body).append(
+      h('p', { class: 'muted' }, 'The tenant portal lets a verified tenant report maintenance issues for their own tenancy and follow their progress. It shows nothing else.'),
+      a.users.length ? h('ul', { class: 'plain-list' }, a.users.map((u) => h('li', { class: 'row row--between' }, h('span', {}, h('strong', {}, u.name ?? u.email), h('span', { class: 'muted small' }, ` ${u.email} · verified ${fmtTimestamp(u.verified_at)}`)),
+        h('button', { class: 'btn btn--ghost btn--sm', type: 'button', onclick: async () => { if (await confirmDialog({ title: 'Remove portal access?', message: `${u.email} will no longer be able to use the tenant portal.`, confirmLabel: 'Remove', danger: true })) { try { await post(`${ctx.base}/portal-access/${u.id}/revoke`, {}); toast('Access removed.', 'success'); rerender(); } catch (e) { toast(e.message, 'error'); } } } }, 'Remove'))))
+        : h('p', {}, 'No one has portal access yet.'),
+      a.pending_invitation ? h('p', { class: 'muted small' }, `An invitation to ${a.pending_invitation.email} is waiting (expires ${fmtTimestamp(a.pending_invitation.expires_at)}).`) : '',
+      t.email ? h('button', { class: 'btn btn--secondary btn--sm', type: 'button', onclick: invite }, a.pending_invitation ? 'Create a new invitation' : 'Invite to portal') : h('p', { class: 'muted small' }, 'Add an email address to this tenant to invite them.'),
+      h('div', { class: 'mt-5' }, reminders));
+  })();
+  return section('Portal & reminders', body);
+}
+
 export function tenantView(ctx, id) {
   const root = h('div', {}, skeleton(4));
   async function render() {
@@ -63,6 +92,7 @@ export function tenantView(ctx, id) {
       h('div', { class: 'cols-2' },
         section('Contact', dl([['Email', t.email && h('a', { href: `mailto:${t.email}` }, t.email)], ['Phone', t.phone], ['Emergency contact', [t.emergency_name, t.emergency_phone].filter(Boolean).join(' · ')]])),
         section('Notes', t.notes ? h('p', { class: 'prewrap' }, t.notes) : h('p', { class: 'muted' }, 'No notes.'))),
+      portalSection(ctx, t, render),
       section('Tenancies', t.tenancies.length
         ? h('div', { class: 'table-wrap' }, h('table', { class: 'table' }, h('caption', { class: 'visually-hidden' }, `Tenancies of ${t.full_name}`),
             h('thead', {}, h('tr', {}, ['Unit', 'Status', 'Start', 'End', 'Rent'].map((c) => h('th', { scope: 'col' }, c)))),

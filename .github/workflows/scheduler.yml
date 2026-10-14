@@ -1,0 +1,18 @@
+name: Scheduled jobs
+# Runs reminders and flushes the email queue (with retries) every 10 minutes, independent of the hosting plan.
+# Inert until the repository secrets APP_URL and CRON_SECRET are set. Idempotent: running it more often is always safe.
+on:
+  schedule: [{ cron: '*/10 * * * *' }]
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the jobs endpoint
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then echo "APP_URL / CRON_SECRET not configured; skipping."; exit 0; fi
+          curl --fail-with-body --silent --show-error --max-time 120 -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/internal/jobs/run"

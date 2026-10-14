@@ -120,3 +120,56 @@ export const balancesQuery = financeQuery.pick({ property: true, currency: true,
 export const expensesQuery = financeQuery.pick({ property: true, category: true, currency: true, from: true, to: true, includeVoid: true, search: true, sort: true, dir: true, limit: true, offset: true });
 export const auditQuery = financeQuery.pick({ entityType: true, entityId: true, limit: true, offset: true });
 export const performanceQuery = financeQuery.pick({ property: true, currency: true }).extend({ from: date, to: date }).strict();
+
+/* --------------------------------------------------------------- Phase 4: ops */
+export const MAINT_CATEGORIES = ['plumbing', 'electrical', 'heating_cooling', 'appliances', 'structural', 'pest', 'security', 'cleaning', 'grounds', 'other'] as const;
+export const MAINT_STATUSES = ['submitted', 'triaged', 'awaiting_approval', 'assigned', 'in_progress', 'resolved', 'cancelled'] as const;
+export const ATTACHMENT_MIME = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'] as const;
+const uuidField = z.string().uuid();
+const uuidOrNull = nullable(uuidField);
+const bodyText = z.string().trim().min(1, 'Required.').max(4000);
+
+export const maintCreateBody = z.object({
+  property: uuidField, unit: uuidOrNull, tenancy: uuidOrNull, title: z.string().trim().min(3, 'Give it a short title.').max(160), description: bodyText,
+  category: z.enum(MAINT_CATEGORIES).default('other'), urgency: uuidOrNull,
+});
+export const portalRequestBody = z.object({ tenancy: uuidField, title: z.string().trim().min(3, 'Give it a short title.').max(160), description: bodyText, category: z.enum(MAINT_CATEGORIES).default('other'), urgency: uuidOrNull });
+const ver = z.object({ expectedVersion: version });
+export const triageBody = ver.extend({ category: nullable(z.enum(MAINT_CATEGORIES)), note: text(1000) });
+export const cancelRequestBody = ver.extend({ reason });
+export const resolveBody = ver.extend({ resolutionNotes: z.string().trim().min(3, 'Describe what was done.').max(4000) });
+export const urgencyChangeBody = ver.extend({ urgency: uuidField, reason: text(500) });
+export const suggestBody = z.object({ urgency: uuidField, source: text(60) });
+export const noteBody = z.object({ body: bodyText, visibility: z.enum(['internal', 'tenant']).default('internal') });
+export const portalNoteBody = z.object({ body: bodyText });
+export const assignBody = z.object({ vendor: uuidOrNull, assignee: uuidOrNull, scope: reqText(2000), estimateMinor: nullable(positiveMinor), estimateNote: text(1000) })
+  .refine((v) => (v.vendor === null) !== (v.assignee === null), { message: 'Choose either a vendor or a staff member.', path: ['assignee'] });
+export const estimateBody = z.object({ amountMinor: positiveMinor, note: text(1000) });
+export const completeBody = z.object({ actualCostMinor: nullable(minor.min(0).max(1_000_000_000_000)), notes: text(2000) });
+export const attachmentBody = z.object({ fileName: reqText(200), mimeType: z.enum(ATTACHMENT_MIME, { errorMap: () => ({ message: 'Only PDF, PNG, JPEG or WebP files are allowed.' }) }),
+  sizeBytes: z.number().int().min(1).max(10 * 1024 * 1024, 'Files can be at most 10 MB.'), visibility: z.enum(['internal', 'tenant']).default('internal') });
+export const vendorBody = z.object({ name: reqText(160), contactName: text(160), email: nullable(emailField), phone: text(40), categories: z.array(z.enum(MAINT_CATEGORIES)).max(10).default([]), notes: text(4000) });
+export const urgencyLevelBody = z.object({ key: z.string().trim().toLowerCase().regex(/^[a-z][a-z0-9_]{1,30}$/, 'Use lowercase letters, digits and underscores.'), label: reqText(60),
+  rank: z.number().int().min(1).max(1000), isCritical: z.boolean().default(false), tenantSelectable: z.boolean().default(true), isDefault: z.boolean().default(false) });
+export const maintSettingsBody = z.object({
+  escalationUser: uuidOrNull, backupUser: uuidOrNull, criticalKeywords: z.array(z.string().trim().toLowerCase().min(2).max(60)).max(100),
+  ackHours: z.number().int().min(1).max(72), approvalThresholds: z.record(z.string().regex(/^[A-Z]{3}$/), positiveMinor).default({}), allowSelfApproval: z.boolean().default(false),
+});
+export const APPROVAL_ACTIONS = ['maintenance.approve_cost', 'finance.void_charge'] as const;
+export const approvalRequestBody = z.object({ action: z.enum(APPROVAL_ACTIONS), target: uuidField, payload: z.record(z.unknown()), note: text(1000), expiresInHours: z.number().int().min(1).max(720).default(72) });
+export const decisionBody = z.object({ decision: z.enum(['approve', 'reject']), note: text(1000) });
+export const approvalNoteBody = z.object({ note: text(1000) });
+export const prefBody = z.object({ eventType: z.string().max(60), email: z.boolean(), inApp: z.boolean() });
+export const markReadBody = z.object({ ids: nullable(z.array(uuidField).max(200)) });
+export const reminderBody = z.object({ optOut: z.boolean() });
+export const tokenBody = z.object({ token: z.string().min(20).max(200) });
+
+const lim = { limit: z.coerce.number().int().min(1).max(100).optional(), offset: z.coerce.number().int().min(0).max(100_000).optional() };
+const boolQ = z.enum(['true', 'false']).transform((v) => v === 'true');
+export const requestsQuery = z.object({ status: z.enum(MAINT_STATUSES).optional(), urgency: uuidField.optional(), property: uuidField.optional(), category: z.enum(MAINT_CATEGORIES).optional(),
+  assignee: uuidField.optional(), attention: boolQ.optional(), search: z.string().trim().max(100).optional(), sort: z.string().max(20).optional(), dir: z.enum(['asc', 'desc']).optional(), ...lim }).strict();
+export const vendorsQuery = z.object({ search: z.string().trim().max(100).optional(), category: z.enum(MAINT_CATEGORIES).optional(), archived: boolQ.optional(), ...lim }).strict();
+export const approvalsQuery = z.object({ scope: z.enum(['inbox', 'mine', 'all']).optional(), status: z.string().max(20).optional(), action: z.enum(APPROVAL_ACTIONS).optional(), ...lim }).strict();
+export const emailQueueQuery = z.object({ status: z.enum(['queued', 'sending', 'sent', 'failed', 'dead', 'cancelled']).optional(), ...lim }).strict();
+export const notificationsQuery = z.object({ unreadOnly: boolQ.optional(), ...lim }).strict();
+export const jobRunsQuery = z.object({ limit: lim.limit }).strict();

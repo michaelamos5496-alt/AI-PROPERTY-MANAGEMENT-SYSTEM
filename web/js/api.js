@@ -41,7 +41,8 @@ export function safeNext(value, fallback = '/app') {
 
 /** Where a signed-in user belongs. */
 export async function homeFor(me) {
-  return me.memberships.length ? `/app?org=${me.memberships[0].org_id}` : '/onboarding';
+  if (me.memberships.length) return `/app?org=${me.memberships[0].org_id}`;
+  return me.tenant_links?.length ? '/portal' : '/onboarding';   // tenants verified for the portal are not organization members
 }
 
 /** Resolve the current user, or redirect to sign-in. */

@@ -1,7 +1,9 @@
 import { post, requireSession, signOut } from './api.js';
 import { handleForm } from './ui.js';
 
+try { if (sessionStorage.getItem('pai-portal-invite')) location.replace('/portal-invite'); } catch { /* storage unavailable */ }
 const me = await requireSession();
+if (!me.memberships.length && me.tenant_links?.length) location.replace('/portal');
 if (me.memberships.length) location.replace(`/app?org=${me.memberships[0].org_id}`);
 document.getElementById('hello').textContent = me.profile.full_name ? `Welcome, ${me.profile.full_name}.` : 'Welcome.';
 document.getElementById('signout').addEventListener('click', signOut);

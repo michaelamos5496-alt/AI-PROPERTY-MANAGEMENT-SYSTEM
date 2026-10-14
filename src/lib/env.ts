@@ -66,6 +66,9 @@ const schema = z.object({
   BILLING_PAYSTACK_CURRENCIES: z.string().default('NGN').transform((v) => v.split(',').map((x) => x.trim().toUpperCase()).filter(Boolean)),
   /** Slack-compatible incoming webhook (or any URL that accepts {"text": …}). Receives operational alerts: failed jobs, dead letters, unhealthy integrations. */
   ALERT_WEBHOOK_URL: url.optional(),
+  /** LOCAL DEVELOPMENT ONLY. With both set, `npm run dev` signs you in automatically as this (real) user. Refused in production and on any non-local APP_URL. */
+  DEV_AUTO_LOGIN_EMAIL: z.string().email().optional(),
+  DEV_AUTO_LOGIN_PASSWORD: z.string().min(1).optional(),
   /** Refresh-cookie lifetime in days. */
   SESSION_DAYS: z.coerce.number().int().min(1).max(90).default(14),
 });
@@ -91,6 +94,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   }
   if (env.BILLING_PROVIDER === 'paystack' && !env.PAYSTACK_SECRET_KEY) {
     throw new Error('Invalid environment configuration:\n  - BILLING_PROVIDER=paystack requires PAYSTACK_SECRET_KEY');
+  }
+  if ((env.DEV_AUTO_LOGIN_EMAIL || env.DEV_AUTO_LOGIN_PASSWORD) && (env.NODE_ENV === 'production' || process.env.VERCEL || !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(env.APP_URL))) {
+    throw new Error('Invalid environment configuration:\n  - DEV_AUTO_LOGIN_* is for local development only: remove it (it is refused in production, on Vercel, and unless APP_URL is http://localhost or http://127.0.0.1)');
   }
   if (env.NODE_ENV === 'production' && !env.APP_URL.startsWith('https://')) {
     throw new Error('Invalid environment configuration:\n  - APP_URL: must be https in production');

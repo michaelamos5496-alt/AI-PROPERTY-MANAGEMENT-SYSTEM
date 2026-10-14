@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import express from 'express';
 import { createApp } from './app.js';
+import { devAutoLogin } from './lib/dev-autologin.js';
 import { loadEnv } from './lib/env.js';
 
 /** Local server: the API plus the built static site from ./public (mirrors Vercel routing). */
@@ -16,6 +17,8 @@ export function createDevServer(env = loadEnv()) {
   const supabaseOrigin = new URL(env.SUPABASE_URL).origin;
   const withStorage = (v: string) => v.replace("connect-src 'self'", `connect-src 'self' ${supabaseOrigin}`);
   server.use((_req, res, next) => { for (const { key, value } of global) res.setHeader(key, key === 'Content-Security-Policy' ? withStorage(value) : value); next(); });
+  const auto = devAutoLogin(env);
+  if (auto) { console.warn('\n  ⚠ DEV_AUTO_LOGIN is ON: this local server signs you in automatically as ' + env.DEV_AUTO_LOGIN_EMAIL + '. Never use this setting anywhere else.\n'); server.use(auto); }
   server.use('/api', (req, res, next) => { req.url = '/api' + req.url; api(req, res, next); });
   server.use(express.static(join(import.meta.dirname, '..', 'public'), { extensions: ['html'] }));
   return server;
@@ -23,5 +26,7 @@ export function createDevServer(env = loadEnv()) {
 
 if (process.argv[1] && import.meta.filename === process.argv[1]) {
   const env = loadEnv();
-  createDevServer(env).listen(env.PORT, () => console.log(`Property AI dev server: http://localhost:${env.PORT}`));
+  const host = env.DEV_AUTO_LOGIN_EMAIL ? '127.0.0.1' : undefined;          // with auto-login on, only this computer can reach the server
+  const cb = () => console.log(`Property AI dev server: http://localhost:${env.PORT}`);
+  if (host) createDevServer(env).listen(env.PORT, host, cb); else createDevServer(env).listen(env.PORT, cb);
 }

@@ -22,6 +22,8 @@ cp .env.example .env            # SUPABASE_URL=http://127.0.0.1:54321 plus the k
 supabase start && supabase db reset     # applies supabase/migrations/*.sql to a throwaway local database
 npm run dev                     # http://localhost:3000
 ```
+**Skip the login screen locally:** put `DEV_AUTO_LOGIN_EMAIL` and `DEV_AUTO_LOGIN_PASSWORD` (a real account you registered) in `.env`; `npm run dev` then signs you in as that account when you open `/`. It is not an authentication bypass (Supabase still authenticates you and row level security still applies), it exists only in the local dev server, binds to 127.0.0.1, and the app refuses to start with these set in production, on Vercel, or with a non-local `APP_URL`. Never copy them into Vercel.
+
 Everything external is simulated by default (`log` providers, offline AI, no billing). `npm run check` runs lint, types, every test, the build and the secret scan.
 Tests need no Supabase: they run the real migrations on embedded PostgreSQL (PGlite for most, a real server for concurrency).
 
